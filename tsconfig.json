@@ -1,39 +1,31 @@
 {
   "compilerOptions": {
-    /* 🔥 PAKOLLINEN WEB3 + BIGINT */
     "target": "ES2020",
     "lib": ["dom", "dom.iterable", "esnext"],
 
-    /* TypeScript behavior */
     "allowJs": false,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "noEmit": true,
 
-    /* Module / bundler */
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
 
-    /* Next.js + TS */
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
 
-    /* Performance */
     "incremental": true,
     "types": ["node"],
 
-    /* TS import extensions */
     "allowImportingTsExtensions": true,
 
-    /* ⭐ PATH ALIAS (ERITTÄIN TÄRKEÄ) */
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
 
-    /* Next.js plugin (Vercel lisäsi tämän automaattisesti) */
     "plugins": [{ "name": "next" }]
   },
 
@@ -43,6 +35,5 @@
     "src/**/*.ts",
     "src/**/*.tsx"
   ],
-
   "exclude": ["node_modules"]
 }
