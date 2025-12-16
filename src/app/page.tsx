@@ -8,11 +8,9 @@ import {
   readContract,
 } from "@wagmi/core";
 import { base } from "wagmi/chains";
+
 import { wagmiConfig } from "@/web3/wagmi";
-import {
-  CONTRACT_ADDRESS,
-  CONTRACT_ABI,
-} from "@/web3/contract";
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from "@/web3/contract";
 
 import NeonLoader from "@/app/components/NeonLoader";
 import Confetti from "@/app/components/Confetti";
@@ -31,6 +29,10 @@ type TokenRow = {
   dump: number;
   lastVoteAt: number | null;
   feeWei: bigint;
+};
+
+type BirdeyePriceRow = {
+  value?: number;
 };
 
 export default function HomePage() {
@@ -76,8 +78,9 @@ export default function HomePage() {
         return;
       }
 
-      /* ───── Birdeye prices ───── */
-      let priceMap: Record<string, number> = {};
+      /* ───── Birdeye prices (SAFE TYPING) ───── */
+      const priceMap: Record<string, number> = {};
+
       if (BIRDEYE_API_KEY) {
         try {
           const res = await fetch(
@@ -89,13 +92,21 @@ export default function HomePage() {
               },
             }
           );
-          const json = await res.json();
-          if (json?.success) {
-            for (const [a, d] of Object.entries(json.data || {})) {
-              priceMap[a.toLowerCase()] = d?.value ?? 0;
+
+          const json: {
+            success?: boolean;
+            data?: Record<string, BirdeyePriceRow>;
+          } = await res.json();
+
+          if (json.success && json.data) {
+            for (const [addr, row] of Object.entries(json.data)) {
+              priceMap[addr.toLowerCase()] =
+                typeof row?.value === "number" ? row.value : 0;
             }
           }
-        } catch {}
+        } catch {
+          // Birdeye is optional → fail silently
+        }
       }
 
       const rows: TokenRow[] = [];
@@ -107,19 +118,21 @@ export default function HomePage() {
             abi: CONTRACT_ABI,
             functionName: "tokenMetadata",
             args: [addr],
-          }),
+          }) as Promise<[string, string, string]>,
+
           readContract(wagmiConfig, {
             address: CONTRACT_ADDRESS,
             abi: CONTRACT_ABI,
             functionName: "tokenStats",
             args: [addr],
-          }),
+          }) as Promise<[bigint, bigint]>,
+
           readContract(wagmiConfig, {
             address: CONTRACT_ADDRESS,
             abi: CONTRACT_ABI,
             functionName: "tokenConfigs",
             args: [addr],
-          }),
+          }) as Promise<[boolean, boolean, number, bigint, bigint]>,
         ]);
 
         let lastVoteAt: number | null = null;
@@ -130,6 +143,7 @@ export default function HomePage() {
             functionName: "lastVoteTime",
             args: [address, addr],
           })) as bigint;
+
           if (ts > 0n) lastVoteAt = Number(ts) * 1000;
         }
 
@@ -168,7 +182,7 @@ export default function HomePage() {
     ).padStart(2, "0")}`;
   };
 
-  /* ───────── VOTE (FINAL) ───────── */
+  /* ───────── VOTE ───────── */
   const vote = async (token: TokenRow, dir: 0 | 1) => {
     if (!isConnected || votingToken) return;
 
@@ -243,6 +257,10 @@ export default function HomePage() {
                 </div>
                 <img
                   src={t.logo}
+                  onError={(e) =>
+                    ((e.currentTarget as HTMLImageElement).src =
+                      "/placeholder.png")
+                  }
                   className="w-14 h-14 rounded-full border border-zinc-700"
                 />
               </div>
