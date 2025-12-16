@@ -7,12 +7,7 @@
 import type { Abi, Address, Hash } from "viem";
 import { createPublicClient, http, getContract as viemGetContract } from "viem";
 import { base } from "viem/chains";
-import {
-  getWalletClient,
-  simulateContract,
-  writeContract,
-  waitForTransactionReceipt,
-} from "@wagmi/core";
+import { getWalletClient, simulateContract, writeContract } from "@wagmi/core";
 
 import { wagmiConfig } from "@/web3/wagmi"; // ✅ muuta polku jos sinulla eri
 
@@ -45,21 +40,19 @@ function getReadOnlyProvider() {
      * Vanha koodi kutsuu provider.getBlock("latest")
      */
     async getBlock(tag: "latest" | bigint | number) {
-  if (tag === "latest") {
-    return publicClient.getBlock({ blockTag: "latest" });
-  }
+      if (tag === "latest") {
+        return publicClient.getBlock({ blockTag: "latest" });
+      }
 
-  const blockNumber =
-    typeof tag === "bigint" ? tag : BigInt(tag);
-
-  return publicClient.getBlock({ blockNumber });
-},
+      const blockNumber = typeof tag === "bigint" ? tag : BigInt(tag);
+      return publicClient.getBlock({ blockNumber });
+    },
 
     /**
      * Vanha waitForReceipt tms saattaa käyttää tätä
      */
     async getTransactionReceipt(hash: Hash) {
-      return await publicClient.getTransactionReceipt({ hash });
+      return publicClient.getTransactionReceipt({ hash });
     },
   };
 }
@@ -155,8 +148,7 @@ export const ABI = [
 ] as const;
 
 /**
- * ✅ Tämä export puuttui ja aiheutti build-errorin:
- * "CONTRACT_ABI is not exported"
+ * ✅ Tämä export pitää olla, koska page.tsx importtaa CONTRACT_ABI
  */
 export const CONTRACT_ABI = ABI as unknown as Abi;
 
@@ -166,15 +158,11 @@ export const CONTRACT_ABI = ABI as unknown as Abi;
  * Vanha getContract palautti ethers.Contract.
  * Nyt palautetaan viem-contract, mutta pidetään nimi ja signature jotta muu koodi ei hajoa.
  */
-export const getContract = (signerOrProvider: any = provider) => {
-  // Read-only: käytetään publicClientia
-  // Write: käytetään wagmi walletClientia myöhemmin vote/claim-funktioissa
+export const getContract = (_signerOrProvider: any = provider) => {
   return viemGetContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
-    client: {
-      public: publicClient,
-    },
+    client: { public: publicClient },
   });
 };
 
@@ -183,8 +171,6 @@ export const getContract = (signerOrProvider: any = provider) => {
 export const getPlayer = async (addr: string) => {
   if (!addr) throw new Error("Missing address");
   const contract = getContract();
-
-  // viem read
   const r = (await contract.read.getPlayer([addr as Address])) as any;
 
   return {
@@ -243,7 +229,6 @@ export const getTokenConfigSafe = async (token: string) => {
 };
 
 /* ✅ KORJAUS: SAFE METADATA */
-
 export const getTokenMetadataSafe = async (token: string) => {
   try {
     const contract = getContract();
@@ -270,36 +255,30 @@ export const voteOnChain = async (
   const fee = BigInt(feeWei || 0);
 
   try {
-    // WalletClient wagmista (MiniApp + Desktop)
     const walletClient = await getWalletClient(wagmiConfig);
     if (!walletClient) throw new Error("No wallet client");
 
-    // Simuloi ensin (revertit näkyy oikein)
     await simulateContract(wagmiConfig, {
+      chainId: base.id,
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: "vote",
       args: [token as Address, direction],
       value: fee,
-      chainId: base.id,
     });
 
-    // Lähetä tx
     const hash = await writeContract(wagmiConfig, {
+      chainId: base.id,
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: "vote",
       args: [token as Address, direction],
       value: fee,
-      chainId: base.id,
     });
 
-    // Palautetaan ethers-tyylinen { hash } jotta vanha wait/poll toimii
     return { hash };
   } catch (error: any) {
-    throw new Error(
-      error?.shortMessage || error?.message || "Vote failed"
-    );
+    throw new Error(error?.shortMessage || error?.message || "Vote failed");
   }
 };
 
@@ -314,23 +293,22 @@ export const claimQuestOnChain = async (
   const value = fee > 0n ? fee : 0n;
 
   try {
-    // simulate (vastaa vanhaa staticCall-ideaa)
     await simulateContract(wagmiConfig, {
+      chainId: base.id,
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: "claimQuest",
       args: [BigInt(questId)],
       value,
-      chainId: base.id,
     });
 
     const hash = await writeContract(wagmiConfig, {
+      chainId: base.id,
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: "claimQuest",
       args: [BigInt(questId)],
       value,
-      chainId: base.id,
     });
 
     return { hash };
@@ -340,22 +318,24 @@ export const claimQuestOnChain = async (
 };
 
 export const claimQuestOnChainAuto = async (questId: number) => {
-  // pidetään funktio olemassa (älä poista)
   const contract = getContract();
   const q = (await contract.read.quests([BigInt(questId)])) as any;
-  return claimQuestOnChain(null, questId, q?.[4]); // feeWei index tässä ABI:ssa
+  return claimQuestOnChain(null, questId, q?.[4]); // feeWei index ABI:ssa
 };
 
 /* ───────────────── QUEST STATUS ───────────────── */
 
-export const canClaimQuestOnChain = async (signerOrProvider: any, questId: number) => {
+export const canClaimQuestOnChain = async (
+  signerOrProvider: any,
+  questId: number
+) => {
   try {
     await simulateContract(wagmiConfig, {
+      chainId: base.id,
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: "claimQuest",
       args: [BigInt(questId)],
-      chainId: base.id,
     });
     return { canClaim: true };
   } catch (e: any) {
@@ -413,7 +393,7 @@ const cached = async (k: string, fn: () => Promise<any>) => {
 export const getActiveTokensCached = () =>
   cached("tokens", async () => {
     const contract = getContract();
-    return await contract.read.getActiveTokens();
+    return contract.read.getActiveTokens();
   });
 
 export const getTokenConfigCached = (t: string) =>
