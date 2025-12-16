@@ -2,11 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAccount } from "wagmi";
-import {
-  readContract,
-  writeContract,
-  waitForTransactionReceipt,
-} from "@wagmi/core";
+import { readContract, writeContract } from "@wagmi/core";
 import { base } from "wagmi/chains";
 
 import { wagmiConfig } from "@/web3/wagmi";
@@ -16,7 +12,7 @@ type TokenRow = {
   address: `0x${string}`;
   name: string;
   symbol: string;
-  logo: string;
+  logoURI: string;
   pump: number;
   dump: number;
   feeWei: bigint;
@@ -44,8 +40,7 @@ export default function HomePage() {
 
       for (const token of addresses) {
         try {
-          // ✅ FIX: ei Promise-tyyppipakotuksia
-          const results = (await Promise.all([
+          const [meta, stats, cfg] = (await Promise.all([
             readContract(wagmiConfig, {
               chainId: base.id,
               address: CONTRACT_ADDRESS,
@@ -53,7 +48,6 @@ export default function HomePage() {
               functionName: "tokenMetadata",
               args: [token],
             }),
-
             readContract(wagmiConfig, {
               chainId: base.id,
               address: CONTRACT_ADDRESS,
@@ -61,7 +55,6 @@ export default function HomePage() {
               functionName: "tokenStats",
               args: [token],
             }),
-
             readContract(wagmiConfig, {
               chainId: base.id,
               address: CONTRACT_ADDRESS,
@@ -69,22 +62,16 @@ export default function HomePage() {
               functionName: "tokenConfigs",
               args: [token],
             }),
-          ])) as unknown[];
-
-          // ✅ FIX: castaus vasta tässä
-          const meta = results[0] as readonly [string, string, string];
-          const stats = results[1] as readonly [bigint, bigint];
-          const cfg = results[2] as readonly [
-            boolean,
-            boolean,
-            number,
-            bigint,
-            bigint
+          ])) as [
+            readonly [string, string, string],
+            readonly [bigint, bigint],
+            readonly [boolean, boolean, number, bigint, bigint]
           ];
 
-          if (!cfg[0]) continue; // enabled
+          if (!cfg[0]) continue; // enabled == false
 
           let lastVoteAt: number | null = null;
+
           if (address) {
             const ts = (await readContract(wagmiConfig, {
               chainId: base.id,
@@ -101,7 +88,7 @@ export default function HomePage() {
             address: token,
             name: meta[0],
             symbol: meta[1],
-            logo: meta[2],
+            logoURI: meta[2],
             pump: Number(stats[0]),
             dump: Number(stats[1]),
             feeWei: cfg[3],
@@ -135,11 +122,18 @@ export default function HomePage() {
         >
           <div className="flex justify-between items-center">
             <div>
-              <div className="font-bold text-lg">{t.symbol}</div>
+              <div className="font-bold text-lg">
+                {t.symbol || t.address}
+              </div>
               <div className="text-xs text-zinc-400">{t.name}</div>
             </div>
-            {t.logo && (
-              <img src={t.logo} className="h-10 w-10 rounded-full" />
+
+            {t.logoURI && (
+              <img
+                src={t.logoURI}
+                className="h-10 w-10 rounded-full"
+                alt=""
+              />
             )}
           </div>
 
