@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  useAccount,
-  useReadContract,
-  useWriteContract,
-} from "wagmi";
-import { base } from "wagmi/chains";
+import { useAccount } from "wagmi";
+import { base } from "viem/chains";
 
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from "@/web3/contract";
+import {
+  CONTRACT_ADDRESS,
+  getActiveTokens,
+  getTokenConfigSafe,
+  getTokenMetadataSafe,
+  getTokenStatsSafe,
+  getLastVoteTimeSafe,
+} from "@/web3/contract";
 
 type TokenRow = {
   address: `0x${string}`;
@@ -23,100 +26,54 @@ type TokenRow = {
 
 export default function HomePage() {
   const { address, isConnected } = useAccount();
-  const { writeContractAsync } = useWriteContract();
 
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1️⃣ aktiiviset tokenit
-  const { data: activeTokens } = useReadContract({
-    chainId: base.id,
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: "getActiveTokens",
-  });
-
   useEffect(() => {
-    if (!activeTokens) return;
-
     async function load() {
       setLoading(true);
-      const rows: TokenRow[] = [];
 
-      for (const token of activeTokens as `0x${string}`[]) {
-        try {
-          // 🔹 METADATA
-          const meta = (await read("tokenMetadata", [
-            token,
-          ])) as readonly [string, string, string];
+      try {
+        const tokenAddresses = await getActiveTokens();
+        const rows: TokenRow[] = [];
 
-          // 🔹 STATS
-          const stats = (await read("tokenStats", [
-            token,
-          ])) as readonly [bigint, bigint];
+        for (const token of tokenAddresses as `0x${string}`[]) {
+          const cfg = await getTokenConfigSafe(token);
+          if (!cfg.enabled) continue;
 
-          // 🔹 CONFIG
-          const cfg = (await read("tokenConfigs", [
-            token,
-          ])) as readonly [
-            boolean,
-            boolean,
-            number,
-            bigint,
-            bigint
-          ];
-
-          if (!cfg[0]) continue;
+          const meta = await getTokenMetadataSafe(token);
+          const stats = await getTokenStatsSafe(token);
 
           let lastVoteAt: number | null = null;
-
           if (address) {
-            const ts = (await read("lastVoteTime", [
-              address,
-              token,
-            ])) as bigint;
-
+            const ts = await getLastVoteTimeSafe(
+              address as `0x${string}`,
+              token
+            );
             if (ts > 0n) lastVoteAt = Number(ts) * 1000;
           }
 
           rows.push({
             address: token,
-            name: meta[0],
-            symbol: meta[1],
-            logoURI: meta[2],
-            pump: Number(stats[0]),
-            dump: Number(stats[1]),
-            feeWei: cfg[3],
+            name: meta.name,
+            symbol: meta.symbol,
+            logoURI: meta.logoURI,
+            pump: Number(stats.pump),
+            dump: Number(stats.dump),
+            feeWei: cfg.feeWei ?? 0n,
             lastVoteAt,
           });
-        } catch (e) {
-          console.warn("Token skipped:", token, e);
         }
-      }
 
-      setTokens(rows);
-      setLoading(false);
+        setTokens(rows);
+      } finally {
+        setLoading(false);
+      }
     }
 
     load();
-  }, [activeTokens, address]);
-
-  // 🔹 SAFE read helper
-  async function read(
-    functionName: string,
-    args: readonly unknown[]
-  ) {
-    const { readContract } = await import("wagmi/actions");
-    const { config } = await import("wagmi");
-
-    return readContract(config, {
-      chainId: base.id,
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      functionName,
-      args,
-    });
-  }
+  }, [address]);
 
   if (loading) {
     return <div className="p-6 text-white">Loading tokens…</div>;
@@ -153,42 +110,83 @@ export default function HomePage() {
           </div>
 
           <div className="mt-4 flex gap-3">
-            <button
+            <VoteButton
               disabled={!isConnected}
-              onClick={async () => {
-                await writeContractAsync({
-                  chainId: base.id,
-                  address: CONTRACT_ADDRESS,
-                  abi: CONTRACT_ABI,
-                  functionName: "vote",
-                  args: [t.address, 0],
-                  value: t.feeWei,
-                });
-              }}
-              className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
-            >
-              PUMP
-            </button>
+              token={t.address}
+              vote={0}
+              feeWei={t.feeWei}
+              label="PUMP"
+              className="bg-emerald-500"
+            />
 
-            <button
+            <VoteButton
               disabled={!isConnected}
-              onClick={async () => {
-                await writeContractAsync({
-                  chainId: base.id,
-                  address: CONTRACT_ADDRESS,
-                  abi: CONTRACT_ABI,
-                  functionName: "vote",
-                  args: [t.address, 1],
-                  value: t.feeWei,
-                });
-              }}
-              className="flex-1 bg-red-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
-            >
-              DUMP
-            </button>
+              token={t.address}
+              vote={1}
+              feeWei={t.feeWei}
+              label="DUMP"
+              className="bg-red-500"
+            />
           </div>
         </div>
       ))}
     </div>
+  );
+}
+
+/* ───────────────── VOTE BUTTON ───────────────── */
+
+function VoteButton({
+  token,
+  vote,
+  feeWei,
+  label,
+  disabled,
+  className,
+}: {
+  token: `0x${string}`;
+  vote: 0 | 1;
+  feeWei: bigint;
+  label: string;
+  disabled: boolean;
+  className: string;
+}) {
+  const { address } = useAccount();
+
+  async function handleVote() {
+    if (!address) return;
+
+    const { writeContract } = await import("wagmi/actions");
+    const { config } = await import("wagmi");
+
+    await writeContract(config, {
+      chainId: base.id,
+      address: CONTRACT_ADDRESS,
+      abi: [
+        {
+          type: "function",
+          name: "vote",
+          stateMutability: "payable",
+          inputs: [
+            { name: "token", type: "address" },
+            { name: "side", type: "uint8" },
+          ],
+          outputs: [],
+        },
+      ],
+      functionName: "vote",
+      args: [token, vote],
+      value: feeWei,
+    });
+  }
+
+  return (
+    <button
+      disabled={disabled}
+      onClick={handleVote}
+      className={`flex-1 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700 ${className}`}
+    >
+      {label}
+    </button>
   );
 }
