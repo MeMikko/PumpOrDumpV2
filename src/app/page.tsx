@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
-import { base } from "viem/chains";
+import { useAccount, useWriteContract } from "wagmi";
 
 import {
-  CONTRACT_ADDRESS,
   getActiveTokens,
   getTokenConfigSafe,
   getTokenMetadataSafe,
   getTokenStatsSafe,
   getLastVoteTimeSafe,
+  CONTRACT_ADDRESS,
+  CONTRACT_ABI,
 } from "@/web3/contract";
 
 type TokenRow = {
@@ -26,6 +26,7 @@ type TokenRow = {
 
 export default function HomePage() {
   const { address, isConnected } = useAccount();
+  const { writeContractAsync } = useWriteContract();
 
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +76,16 @@ export default function HomePage() {
     load();
   }, [address]);
 
+  async function vote(token: `0x${string}`, side: 0 | 1, feeWei: bigint) {
+    await writeContractAsync({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "vote",
+      args: [token, side],
+      value: feeWei,
+    });
+  }
+
   if (loading) {
     return <div className="p-6 text-white">Loading tokens…</div>;
   }
@@ -110,83 +121,24 @@ export default function HomePage() {
           </div>
 
           <div className="mt-4 flex gap-3">
-            <VoteButton
+            <button
               disabled={!isConnected}
-              token={t.address}
-              vote={0}
-              feeWei={t.feeWei}
-              label="PUMP"
-              className="bg-emerald-500"
-            />
+              onClick={() => vote(t.address, 0, t.feeWei)}
+              className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
+            >
+              PUMP
+            </button>
 
-            <VoteButton
+            <button
               disabled={!isConnected}
-              token={t.address}
-              vote={1}
-              feeWei={t.feeWei}
-              label="DUMP"
-              className="bg-red-500"
-            />
+              onClick={() => vote(t.address, 1, t.feeWei)}
+              className="flex-1 bg-red-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
+            >
+              DUMP
+            </button>
           </div>
         </div>
       ))}
     </div>
-  );
-}
-
-/* ───────────────── VOTE BUTTON ───────────────── */
-
-function VoteButton({
-  token,
-  vote,
-  feeWei,
-  label,
-  disabled,
-  className,
-}: {
-  token: `0x${string}`;
-  vote: 0 | 1;
-  feeWei: bigint;
-  label: string;
-  disabled: boolean;
-  className: string;
-}) {
-  const { address } = useAccount();
-
-  async function handleVote() {
-    if (!address) return;
-
-    const { writeContract } = await import("wagmi/actions");
-    const { config } = await import("wagmi");
-
-    await writeContract(config, {
-      chainId: base.id,
-      address: CONTRACT_ADDRESS,
-      abi: [
-        {
-          type: "function",
-          name: "vote",
-          stateMutability: "payable",
-          inputs: [
-            { name: "token", type: "address" },
-            { name: "side", type: "uint8" },
-          ],
-          outputs: [],
-        },
-      ],
-      functionName: "vote",
-      args: [token, vote],
-      value: feeWei,
-    });
-  }
-
-  return (
-    <button
-      disabled={disabled}
-      onClick={handleVote}
-      className={`flex-1 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700 ${className}`}
-    >
-      {label}
-    </button>
   );
 }
