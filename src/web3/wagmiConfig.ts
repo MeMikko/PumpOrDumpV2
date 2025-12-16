@@ -1,30 +1,50 @@
-import { farcasterMiniApp, baseAccount } from '@farcaster/miniapp-wagmi-connector';
-import type { Connector } from 'wagmi';
-import { createConfig, http } from 'wagmi';
-import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
-import { env } from '../lib/env';
-import { farcasterSDK } from '../identity/farcaster';
-import { primaryChain, supportedChains } from './chains';
+// src/web3/wagmiConfig.ts
+import { createConfig, http } from "wagmi";
+import { base } from "wagmi/chains";
+import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
+import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
-const walletConnectConnector = env.walletConnectProjectId
-  ? walletConnect({
-      projectId: env.walletConnectProjectId,
-      showQrModal: true
-    })
-  : undefined;
-
-const connectors: Connector[] = [
-  farcasterMiniApp({ sdk: farcasterSDK }),
-  baseAccount({ sdk: farcasterSDK }),
-  injected({ target: 'metaMask', shimDisconnect: true }),
-  coinbaseWallet({ appName: env.coinbaseAppName })
-].concat(walletConnectConnector ? [walletConnectConnector] : []);
+const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WC_ID;
+const BASE_RPC =
+  process.env.NEXT_PUBLIC_BASE_RPC_URL ??
+  "https://base-mainnet.public.blastapi.io";
 
 export const wagmiConfig = createConfig({
-  chains: supportedChains,
-  connectors,
+  ssr: false,
+
+  chains: [base],
   transports: {
-    [primaryChain.id]: http()
+    [base.id]: http(BASE_RPC),
   },
-  ssr: true
+
+  connectors: [
+    /* 🟣 Farcaster MiniApp */
+    farcasterMiniApp(),
+
+    /* 🦊 MetaMask */
+    injected({
+      target: "metaMask",
+      shimDisconnect: true,
+    }),
+
+    /* 🔗 WalletConnect */
+    ...(WC_PROJECT_ID
+      ? [
+          walletConnect({
+            projectId: WC_PROJECT_ID,
+            metadata: {
+              name: "Pump or Dump",
+              description: "Predict → Earn → Dominate",
+              url: "https://pumpordump-app.vercel.app",
+              icons: ["https://pumpordump-app.vercel.app/icon.png"],
+            },
+          }),
+        ]
+      : []),
+
+    /* 🧿 Coinbase Wallet */
+    coinbaseWallet({
+      appName: "Pump or Dump",
+    }),
+  ],
 });
