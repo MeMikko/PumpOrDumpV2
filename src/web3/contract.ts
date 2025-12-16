@@ -1,5 +1,5 @@
 // src/web3/contract.ts
-// FINAL – viem-safe ABI, no string ABI, desktop + MiniApp compatible
+// FINAL – full ABI, viem-safe, desktop + MiniApp compatible
 
 import type { Abi, Address } from "viem";
 import { createPublicClient, http, getContract } from "viem";
@@ -19,9 +19,11 @@ export const publicClient = createPublicClient({
   transport: http(RPC_URL),
 });
 
-/* ───────────────── ABI (OBJECT ONLY) ───────────────── */
+/* ───────────────── ABI (FULL, OBJECT ONLY) ───────────────── */
 
 export const CONTRACT_ABI = [
+  /* ───── Core ───── */
+
   {
     type: "function",
     name: "owner",
@@ -38,6 +40,30 @@ export const CONTRACT_ABI = [
   },
   {
     type: "function",
+    name: "CONTRACT_VERSION",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "string" }],
+  },
+  {
+    type: "function",
+    name: "VOTE_COOLDOWN",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint64" }],
+  },
+  {
+    type: "function",
+    name: "seasonId",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+
+  /* ───── Tokens ───── */
+
+  {
+    type: "function",
     name: "getActiveTokens",
     stateMutability: "view",
     inputs: [],
@@ -49,11 +75,11 @@ export const CONTRACT_ABI = [
     stateMutability: "view",
     inputs: [{ name: "token", type: "address" }],
     outputs: [
-      { type: "bool" },
-      { type: "bool" },
-      { type: "uint8" },
-      { type: "uint256" },
-      { type: "uint256" },
+      { type: "bool" },     // enabled
+      { type: "bool" },     // allowMultiple
+      { type: "uint8" },    // maxVotes
+      { type: "uint256" },  // feeWei
+      { type: "uint256" },  // xpReward
     ],
   },
   {
@@ -62,10 +88,43 @@ export const CONTRACT_ABI = [
     stateMutability: "view",
     inputs: [{ name: "token", type: "address" }],
     outputs: [
-      { type: "string" },
-      { type: "string" },
-      { type: "string" },
+      { type: "string" }, // name
+      { type: "string" }, // symbol
+      { type: "string" }, // logoURI
     ],
+  },
+  {
+    type: "function",
+    name: "tokenStats",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [
+      { type: "uint256" }, // pump
+      { type: "uint256" }, // dump
+    ],
+  },
+
+  /* ───── Voting ───── */
+
+  {
+    type: "function",
+    name: "vote",
+    stateMutability: "payable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "dir", type: "uint8" },
+    ],
+    outputs: [],
+  },
+
+  /* ───── Listings ───── */
+
+  {
+    type: "function",
+    name: "listingCount",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
   },
 ] as const satisfies Abi;
 
@@ -108,5 +167,17 @@ export async function getTokenMetadataSafe(token: Address) {
     };
   } catch {
     return { name: "", symbol: "", logoURI: "" };
+  }
+}
+
+export async function getTokenStatsSafe(token: Address) {
+  try {
+    const r = await contract.read.tokenStats([token]);
+    return {
+      pump: r[0],
+      dump: r[1],
+    };
+  } catch {
+    return { pump: 0n, dump: 0n };
   }
 }
