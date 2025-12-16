@@ -4,7 +4,7 @@ import * as React from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
-import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
+import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WC_ID;
@@ -24,37 +24,34 @@ export const wagmiConfig = createConfig({
     [base.id]: http(BASE_RPC),
   },
 
-  connectors: [
-    /* 🟣 Farcaster MiniApp (Base MiniApp autoconnect) */
-    farcasterMiniApp(),
+connectors: [
+  /* 🟣 Farcaster MiniApp */
+  farcasterMiniApp(),
 
-    /* 🖥️ Desktop MetaMask / injected wallets */
-    injected({
-      target: "metaMask",
-      shimDisconnect: true,
-    }),
+  /* 🦊 MetaMask desktop */
+  metaMask(),
 
-    /* 🔗 WalletConnect (optional) */
-    ...(WC_PROJECT_ID
-      ? [
-          walletConnect({
-            projectId: WC_PROJECT_ID,
-            metadata: {
-              name: "Pump or Dump",
-              description: "Predict → Earn → Dominate",
-              url: "https://pumpordump-app.vercel.app",
-              icons: ["https://pumpordump-app.vercel.app/icon.png"],
-            },
-          }),
-        ]
-      : []),
+  /* 🔗 WalletConnect */
+  ...(WC_PROJECT_ID
+    ? [
+        walletConnect({
+          projectId: WC_PROJECT_ID,
+          metadata: {
+            name: "Pump or Dump",
+            description: "Predict → Earn → Dominate",
+            url: "https://pumpordump-app.vercel.app",
+            icons: ["https://pumpordump-app.vercel.app/icon.png"],
+          },
+        }),
+      ]
+    : []),
 
-    /* 🔵 Coinbase Wallet */
-    coinbaseWallet({
-      appName: "Pump or Dump",
-    }),
-  ],
-});
+  /* 🔵 Coinbase */
+  coinbaseWallet({
+    appName: "Pump or Dump",
+  }),
+],
+
 
 /* ────────────────────────────────────────────── */
 /* React Query                                    */
