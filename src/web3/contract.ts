@@ -74,6 +74,17 @@ export const CONTRACT_ABI = [
 
   /* ===== VOTING ===== */
   {
+  type: "function",
+  name: "vote",
+  stateMutability: "payable",
+  inputs: [
+    { name: "token", type: "address" },
+    { name: "side", type: "uint8" },
+  ],
+  outputs: [],
+},
+
+  {
     type: "function",
     name: "lastVoteTime",
     stateMutability: "view",
