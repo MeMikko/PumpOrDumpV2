@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   useAccount,
   useReadContract,
@@ -28,31 +28,44 @@ export default function HomePage() {
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadTokens = useCallback(async () => {
-    setLoading(true);
+  // 1️⃣ Hae aktiiviset token-osoitteet
+  const {
+    data: activeTokens,
+    refetch: refetchTokens,
+  } = useReadContract({
+    chainId: base.id,
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "getActiveTokens",
+  });
 
-    try {
-      // 1️⃣ Hae aktiiviset tokenit
-      const addresses = (await fetchActiveTokens()) as `0x${string}`[];
+  // 2️⃣ Lataa tokenien data
+  useEffect(() => {
+    if (!activeTokens) return;
+
+    async function load() {
+      setLoading(true);
 
       const rows: TokenRow[] = [];
 
-      for (const token of addresses) {
+      for (const token of activeTokens as `0x${string}`[]) {
         try {
-          // 2️⃣ Hae token-data
-          const [meta, stats, cfg] = await Promise.all([
-            read("tokenMetadata", [token]),
-            read("tokenStats", [token]),
-            read("tokenConfigs", [token]),
-          ]);
+          const [meta, stats, cfg] = (await Promise.all([
+            fetchRead("tokenMetadata", [token]),
+            fetchRead("tokenStats", [token]),
+            fetchRead("tokenConfigs", [token]),
+          ])) as [
+            readonly [string, string, string],
+            readonly [bigint, bigint],
+            readonly [boolean, boolean, number, bigint, bigint]
+          ];
 
-          if (!cfg[0]) continue; // enabled == false
+          if (!cfg[0]) continue;
 
           let lastVoteAt: number | null = null;
 
-          // 3️⃣ Hae viimeisin äänestys
           if (address) {
-            const ts = (await read("lastVoteTime", [
+            const ts = (await fetchRead("lastVoteTime", [
               address,
               token,
             ])) as bigint;
@@ -76,43 +89,22 @@ export default function HomePage() {
       }
 
       setTokens(rows);
-    } finally {
       setLoading(false);
     }
-  }, [address]);
 
-  useEffect(() => {
-    loadTokens();
-  }, [loadTokens]);
+    load();
+  }, [activeTokens, address]);
 
-  // 🔹 Generic read helper
-  async function read(
-    functionName: string,
-    args: readonly unknown[] = []
-  ) {
-    const res = await useReadOnce(functionName, args);
-    return res;
-  }
-
-  // 🔹 Single-read hook wrapper
-  function useReadOnce(
-    functionName: string,
-    args: readonly unknown[]
-  ) {
-    return new Promise<any>((resolve, reject) => {
-      useReadContract({
-        chainId: base.id,
-        address: CONTRACT_ADDRESS,
-        abi: CONTRACT_ABI,
-        functionName,
-        args,
-        query: {
-          enabled: false,
-          retry: false,
-          onSuccess: resolve,
-          onError: reject,
-        },
-      });
+  // 🔹 helper read
+  async function fetchRead(functionName: string, args: any[]) {
+    const { readContract } = await import("wagmi/actions");
+    const { config } = await import("wagmi");
+    return readContract(config, {
+      chainId: base.id,
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName,
+      args,
     });
   }
 
@@ -160,7 +152,7 @@ export default function HomePage() {
                   args: [t.address, 0],
                   value: t.feeWei,
                 });
-                loadTokens();
+                refetchTokens();
               }}
               className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
             >
@@ -178,7 +170,7 @@ export default function HomePage() {
                   args: [t.address, 1],
                   value: t.feeWei,
                 });
-                loadTokens();
+                refetchTokens();
               }}
               className="flex-1 bg-red-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
             >
