@@ -11,6 +11,7 @@ import {
   getLastVoteTimeSafe,
   CONTRACT_ADDRESS,
   CONTRACT_ABI,
+  contract, // 👈 viem contract instance
 } from "@/web3/contract";
 
 type TokenRow = {
@@ -23,6 +24,10 @@ type TokenRow = {
   feeWei: bigint;
   lastVoteAt: number | null;
 };
+
+function isMiniApp() {
+  return typeof window !== "undefined" && (window as any).fc;
+}
 
 export default function HomePage() {
   const { address, isConnected } = useAccount();
@@ -76,7 +81,22 @@ export default function HomePage() {
     load();
   }, [address]);
 
-  async function vote(token: `0x${string}`, side: 0 | 1, feeWei: bigint) {
+  // 🔥 TÄMÄ ON KRIITTINEN KOHTA
+  async function vote(
+    token: `0x${string}`,
+    side: 0 | 1,
+    feeWei: bigint
+  ) {
+    // 🟣 MiniApp → viem write (EI wagmiä)
+    if (isMiniApp()) {
+      await contract.write.vote(
+        [token, side],
+        { value: feeWei }
+      );
+      return;
+    }
+
+    // 🖥️ Desktop → wagmi write
     await writeContractAsync({
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -122,7 +142,7 @@ export default function HomePage() {
 
           <div className="mt-4 flex gap-3">
             <button
-              disabled={!isConnected}
+              disabled={!isConnected && !isMiniApp()}
               onClick={() => vote(t.address, 0, t.feeWei)}
               className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
             >
@@ -130,7 +150,7 @@ export default function HomePage() {
             </button>
 
             <button
-              disabled={!isConnected}
+              disabled={!isConnected && !isMiniApp()}
               onClick={() => vote(t.address, 1, t.feeWei)}
               className="flex-1 bg-red-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
             >
