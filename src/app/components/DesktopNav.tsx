@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ConnectButton } from "@/components/ConnectButton";
+import { ConnectButton } from "./ConnectButton";
 
 export default function DesktopNav() {
   const pathname = usePathname();
