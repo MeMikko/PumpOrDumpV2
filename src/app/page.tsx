@@ -91,7 +91,10 @@ export default function HomePage() {
     if (isMiniApp()) {
       await contract.write.vote(
         [token, side],
-        { value: feeWei }
+        {
+        account: address,
+        value: feeWei,
+      }
       );
       return;
     }
