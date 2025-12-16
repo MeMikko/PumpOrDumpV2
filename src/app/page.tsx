@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useAccount } from "wagmi";
-import { readContract, writeContract } from "@wagmi/core";
+import {
+  useAccount,
+  useReadContract,
+  useWriteContract,
+} from "wagmi";
 import { base } from "wagmi/chains";
 
-import { wagmiConfig } from "@/web3/wagmi";
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from "@/web3/contract";
 
 type TokenRow = {
@@ -21,6 +23,7 @@ type TokenRow = {
 
 export default function HomePage() {
   const { address, isConnected } = useAccount();
+  const { writeContractAsync } = useWriteContract();
 
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,57 +32,30 @@ export default function HomePage() {
     setLoading(true);
 
     try {
-      const addresses = (await readContract(wagmiConfig, {
-        chainId: base.id,
-        address: CONTRACT_ADDRESS,
-        abi: CONTRACT_ABI,
-        functionName: "getActiveTokens",
-      })) as `0x${string}`[];
+      // 1️⃣ Hae aktiiviset tokenit
+      const addresses = (await fetchActiveTokens()) as `0x${string}`[];
 
       const rows: TokenRow[] = [];
 
       for (const token of addresses) {
         try {
-          const [meta, stats, cfg] = (await Promise.all([
-            readContract(wagmiConfig, {
-              chainId: base.id,
-              address: CONTRACT_ADDRESS,
-              abi: CONTRACT_ABI,
-              functionName: "tokenMetadata",
-              args: [token],
-            }),
-            readContract(wagmiConfig, {
-              chainId: base.id,
-              address: CONTRACT_ADDRESS,
-              abi: CONTRACT_ABI,
-              functionName: "tokenStats",
-              args: [token],
-            }),
-            readContract(wagmiConfig, {
-              chainId: base.id,
-              address: CONTRACT_ADDRESS,
-              abi: CONTRACT_ABI,
-              functionName: "tokenConfigs",
-              args: [token],
-            }),
-          ])) as [
-            readonly [string, string, string],
-            readonly [bigint, bigint],
-            readonly [boolean, boolean, number, bigint, bigint]
-          ];
+          // 2️⃣ Hae token-data
+          const [meta, stats, cfg] = await Promise.all([
+            read("tokenMetadata", [token]),
+            read("tokenStats", [token]),
+            read("tokenConfigs", [token]),
+          ]);
 
           if (!cfg[0]) continue; // enabled == false
 
           let lastVoteAt: number | null = null;
 
+          // 3️⃣ Hae viimeisin äänestys
           if (address) {
-            const ts = (await readContract(wagmiConfig, {
-              chainId: base.id,
-              address: CONTRACT_ADDRESS,
-              abi: CONTRACT_ABI,
-              functionName: "lastVoteTime",
-              args: [address, token],
-            })) as bigint;
+            const ts = (await read("lastVoteTime", [
+              address,
+              token,
+            ])) as bigint;
 
             if (ts > 0n) lastVoteAt = Number(ts) * 1000;
           }
@@ -108,6 +84,37 @@ export default function HomePage() {
   useEffect(() => {
     loadTokens();
   }, [loadTokens]);
+
+  // 🔹 Generic read helper
+  async function read(
+    functionName: string,
+    args: readonly unknown[] = []
+  ) {
+    const res = await useReadOnce(functionName, args);
+    return res;
+  }
+
+  // 🔹 Single-read hook wrapper
+  function useReadOnce(
+    functionName: string,
+    args: readonly unknown[]
+  ) {
+    return new Promise<any>((resolve, reject) => {
+      useReadContract({
+        chainId: base.id,
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName,
+        args,
+        query: {
+          enabled: false,
+          retry: false,
+          onSuccess: resolve,
+          onError: reject,
+        },
+      });
+    });
+  }
 
   if (loading) {
     return <div className="p-6 text-white">Loading tokens…</div>;
@@ -144,16 +151,17 @@ export default function HomePage() {
           <div className="mt-4 flex gap-3">
             <button
               disabled={!isConnected}
-              onClick={() =>
-                writeContract(wagmiConfig, {
+              onClick={async () => {
+                await writeContractAsync({
                   chainId: base.id,
                   address: CONTRACT_ADDRESS,
                   abi: CONTRACT_ABI,
                   functionName: "vote",
                   args: [t.address, 0],
                   value: t.feeWei,
-                })
-              }
+                });
+                loadTokens();
+              }}
               className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
             >
               PUMP
@@ -161,16 +169,17 @@ export default function HomePage() {
 
             <button
               disabled={!isConnected}
-              onClick={() =>
-                writeContract(wagmiConfig, {
+              onClick={async () => {
+                await writeContractAsync({
                   chainId: base.id,
                   address: CONTRACT_ADDRESS,
                   abi: CONTRACT_ABI,
                   functionName: "vote",
                   args: [t.address, 1],
                   value: t.feeWei,
-                })
-              }
+                });
+                loadTokens();
+              }}
               className="flex-1 bg-red-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
             >
               DUMP
