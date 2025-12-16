@@ -18,17 +18,33 @@ export function ConnectButton() {
     );
   }
 
+  const metaMask = connectors.find(
+    (c) => c.id === "metaMask"
+  );
   const walletConnect = connectors.find(
     (c) => c.id === "walletConnect"
   );
 
+  function handleConnect() {
+    // 🦊 1️⃣ Desktop MetaMask extension
+    if (metaMask && metaMask.ready) {
+      connect({ connector: metaMask });
+      return;
+    }
+
+    // 🔗 2️⃣ Fallback: WalletConnect QR
+    if (walletConnect) {
+      connect({ connector: walletConnect });
+      return;
+    }
+
+    console.warn("No wallet connector available");
+  }
+
   return (
     <button
-      disabled={!walletConnect || isPending}
-      onClick={() => {
-        if (!walletConnect) return;
-        connect({ connector: walletConnect });
-      }}
+      disabled={isPending}
+      onClick={handleConnect}
       className="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-bold text-black disabled:opacity-50"
     >
       {isPending ? "Connecting…" : "Connect"}
