@@ -1,11 +1,11 @@
-import MiniAppSDK from "@farcaster/miniapp-sdk";
+import miniAppSDK from "@farcaster/miniapp-sdk";
 
 /**
- * Singleton Farcaster MiniApp SDK instance
- * Used for:
- * - getUser()
- * - getContext()
- * - signMessage()
- * - requestWallet()
+ * Farcaster MiniApp SDK
+ *
+ * NOTE:
+ * - SDK is NOT a class
+ * - Do NOT use `new`
+ * - This is a singleton provided by the runtime
  */
-export const farcasterSDK = new MiniAppSDK();
+export const farcasterSDK = miniAppSDK;
