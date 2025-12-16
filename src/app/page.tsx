@@ -83,31 +83,38 @@ export default function HomePage() {
 
   // 🔥 TÄMÄ ON KRIITTINEN KOHTA
   async function vote(
-    token: `0x${string}`,
-    side: 0 | 1,
-    feeWei: bigint
-  ) {
-    // 🟣 MiniApp → viem write (EI wagmiä)
-    if (isMiniApp()) {
-      await contract.write.vote(
-        [token, side],
-        {
-        account: address,
-        value: feeWei,
-      }
-      );
-      return;
+  token: `0x${string}`,
+  side: 0 | 1,
+  feeWei: bigint
+) {
+  // 🟣 MiniApp → viem write
+  if (isMiniApp()) {
+    if (!address) {
+      throw new Error("No MiniApp account available");
     }
 
-    // 🖥️ Desktop → wagmi write
-    await writeContractAsync({
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      functionName: "vote",
-      args: [token, side],
-      value: feeWei,
-    });
+    const account = address as `0x${string}`; // 🔥 tyyppikavennus
+
+    await contract.write.vote(
+      [token, side],
+      {
+        account,
+        value: feeWei,
+      }
+    );
+    return;
   }
+
+  // 🖥️ Desktop → wagmi write
+  await writeContractAsync({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "vote",
+    args: [token, side],
+    value: feeWei,
+  });
+}
+
 
   if (loading) {
     return <div className="p-6 text-white">Loading tokens…</div>;
