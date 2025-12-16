@@ -28,36 +28,42 @@ export default function HomePage() {
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1️⃣ Hae aktiiviset token-osoitteet
-  const {
-    data: activeTokens,
-    refetch: refetchTokens,
-  } = useReadContract({
+  // 1️⃣ aktiiviset tokenit
+  const { data: activeTokens } = useReadContract({
     chainId: base.id,
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: "getActiveTokens",
   });
 
-  // 2️⃣ Lataa tokenien data
   useEffect(() => {
     if (!activeTokens) return;
 
     async function load() {
       setLoading(true);
-
       const rows: TokenRow[] = [];
 
       for (const token of activeTokens as `0x${string}`[]) {
         try {
-          const [meta, stats, cfg] = (await Promise.all([
-            fetchRead("tokenMetadata", [token]),
-            fetchRead("tokenStats", [token]),
-            fetchRead("tokenConfigs", [token]),
-          ])) as [
-            readonly [string, string, string],
-            readonly [bigint, bigint],
-            readonly [boolean, boolean, number, bigint, bigint]
+          // 🔹 METADATA
+          const meta = (await read("tokenMetadata", [
+            token,
+          ])) as readonly [string, string, string];
+
+          // 🔹 STATS
+          const stats = (await read("tokenStats", [
+            token,
+          ])) as readonly [bigint, bigint];
+
+          // 🔹 CONFIG
+          const cfg = (await read("tokenConfigs", [
+            token,
+          ])) as readonly [
+            boolean,
+            boolean,
+            number,
+            bigint,
+            bigint
           ];
 
           if (!cfg[0]) continue;
@@ -65,7 +71,7 @@ export default function HomePage() {
           let lastVoteAt: number | null = null;
 
           if (address) {
-            const ts = (await fetchRead("lastVoteTime", [
+            const ts = (await read("lastVoteTime", [
               address,
               token,
             ])) as bigint;
@@ -95,10 +101,14 @@ export default function HomePage() {
     load();
   }, [activeTokens, address]);
 
-  // 🔹 helper read
-  async function fetchRead(functionName: string, args: any[]) {
+  // 🔹 SAFE read helper
+  async function read(
+    functionName: string,
+    args: readonly unknown[]
+  ) {
     const { readContract } = await import("wagmi/actions");
     const { config } = await import("wagmi");
+
     return readContract(config, {
       chainId: base.id,
       address: CONTRACT_ADDRESS,
@@ -124,7 +134,9 @@ export default function HomePage() {
               <div className="font-bold text-lg">
                 {t.symbol || t.address}
               </div>
-              <div className="text-xs text-zinc-400">{t.name}</div>
+              <div className="text-xs text-zinc-400">
+                {t.name}
+              </div>
             </div>
 
             {t.logoURI && (
@@ -152,7 +164,6 @@ export default function HomePage() {
                   args: [t.address, 0],
                   value: t.feeWei,
                 });
-                refetchTokens();
               }}
               className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
             >
@@ -170,7 +181,6 @@ export default function HomePage() {
                   args: [t.address, 1],
                   value: t.feeWei,
                 });
-                refetchTokens();
               }}
               className="flex-1 bg-red-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
             >
