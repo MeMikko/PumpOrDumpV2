@@ -4,7 +4,7 @@ import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 export function ConnectButton() {
   const { isConnected, address } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
   if (isConnected) {
@@ -18,12 +18,20 @@ export function ConnectButton() {
     );
   }
 
+  const walletConnect = connectors.find(
+    (c) => c.id === "walletConnect"
+  );
+
   return (
     <button
-      onClick={() => connect({ connector: connectors[0] })}
-      className="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-bold text-black"
+      disabled={!walletConnect || isPending}
+      onClick={() => {
+        if (!walletConnect) return;
+        connect({ connector: walletConnect });
+      }}
+      className="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-bold text-black disabled:opacity-50"
     >
-      Connect
+      {isPending ? "Connecting…" : "Connect"}
     </button>
   );
 }
