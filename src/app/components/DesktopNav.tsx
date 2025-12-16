@@ -16,15 +16,16 @@ export default function DesktopNav() {
 
   return (
     <nav className="w-full h-16 flex items-center justify-between bg-black/60 backdrop-blur border-b border-zinc-800 px-8">
+      {/* Vasemmat linkit */}
       <div className="flex items-center gap-6">
         <Link href="/" className={linkClass("/")}>Home</Link>
         <Link href="/quests" className={linkClass("/quests")}>Quests</Link>
         <Link href="/leaderboard" className={linkClass("/leaderboard")}>Leaderboard</Link>
         <Link href="/profile" className={linkClass("/profile")}>Profile</Link>
-        <div className="ml-auto">
-            <ConnectButton />
-        </div>
       </div>
+
+      {/* Oikea puoli */}
+      <ConnectButton />
     </nav>
   );
 }
