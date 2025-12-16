@@ -1,33 +1,109 @@
-// src/lib/contract.js
+// src/web3/contract.ts
 // FINAL VERSION – December 13, 2025
 // All fixes included: token loading, vote, quest claim (no false InvalidInput), MiniApp compatibility, clear error messages
 
 /* ───────────────── CONFIG ───────────────── */
 
+import type { Abi, Address, Hash } from "viem";
+import { createPublicClient, http, getContract as viemGetContract } from "viem";
+import { base } from "viem/chains";
+import {
+  getWalletClient,
+  simulateContract,
+  writeContract,
+  waitForTransactionReceipt,
+} from "@wagmi/core";
+
+import { wagmiConfig } from "@/web3/wagmi"; // ✅ muuta polku jos sinulla eri
+
 export const CONTRACT_ADDRESS =
-  "0xD5979d30D00BA78bE26EA8f0Aadd1688f6bd9e0d";
+  "0xD5979d30D00BA78bE26EA8f0Aadd1688f6bd9e0d" as Address;
+
+/**
+ * Read-only RPC URL (Base)
+ * Käyttää env: NEXT_PUBLIC_BASE_RPC_URL jos olemassa, muuten Base public.
+ */
+const RPC_URL =
+  process.env.NEXT_PUBLIC_BASE_RPC_URL ||
+  "https://base-mainnet.public.blastapi.io";
+
+/**
+ * viem public client (read-only)
+ */
+const publicClient = createPublicClient({
+  chain: base,
+  transport: http(RPC_URL),
+});
+
+/**
+ * Ethers-tyylinen provider-wrapper, jotta vanhat kutsut (provider.getBlock) eivät hajoa.
+ * ÄLÄ poista: vanha frontend-logiikka luottaa tähän.
+ */
+function getReadOnlyProvider() {
+  return {
+    /**
+     * Vanha koodi kutsuu provider.getBlock("latest")
+     */
+    async getBlock(tag: "latest" | bigint | number) {
+      const block = await publicClient.getBlock({
+        blockTag: tag === "latest" ? "latest" : undefined,
+        blockNumber:
+          typeof tag === "bigint"
+            ? tag
+            : typeof tag === "number"
+            ? BigInt(tag)
+            : undefined,
+      });
+      // block.timestamp on bigint viemissä → säilytetään jotta Number() toimii kutsujassa
+      return block;
+    },
+
+    /**
+     * Vanha waitForReceipt tms saattaa käyttää tätä
+     */
+    async getTransactionReceipt(hash: Hash) {
+      return await publicClient.getTransactionReceipt({ hash });
+    },
+  };
+}
 
 export const provider = getReadOnlyProvider();
 
 /* ───────────────── ABI ───────────────── */
 
 export const ABI = [
-  {"inputs":[{"internalType":"address","name":"initialOwner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+  {
+    inputs: [{ internalType: "address", name: "initialOwner", type: "address" }],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
 
-  {"inputs":[{"internalType":"address","name":"target","type":"address"}],"name":"AddressEmptyCode","type":"error"},
-  {"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"AddressInsufficientBalance","type":"error"},
-  {"inputs":[],"name":"ContractPaused","type":"error"},
-  {"inputs":[],"name":"CooldownActive","type":"error"},
-  {"inputs":[],"name":"FailedInnerCall","type":"error"},
-  {"inputs":[],"name":"InsufficientFee","type":"error"},
-  {"inputs":[],"name":"InvalidInput","type":"error"},
-  {"inputs":[],"name":"MaxVotesReached","type":"error"},
-  {"inputs":[],"name":"NotOwner","type":"error"},
-  {"inputs":[],"name":"ReentrancyGuardReentrantCall","type":"error"},
-  {"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"SafeERC20FailedOperation","type":"error"},
-  {"inputs":[],"name":"TokenInactive","type":"error"},
-  {"inputs":[],"name":"TransferFailed","type":"error"},
-  {"inputs":[],"name":"UserBanned","type":"error"},
+  {
+    inputs: [{ internalType: "address", name: "target", type: "address" }],
+    name: "AddressEmptyCode",
+    type: "error",
+  },
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "AddressInsufficientBalance",
+    type: "error",
+  },
+  { inputs: [], name: "ContractPaused", type: "error" },
+  { inputs: [], name: "CooldownActive", type: "error" },
+  { inputs: [], name: "FailedInnerCall", type: "error" },
+  { inputs: [], name: "InsufficientFee", type: "error" },
+  { inputs: [], name: "InvalidInput", type: "error" },
+  { inputs: [], name: "MaxVotesReached", type: "error" },
+  { inputs: [], name: "NotOwner", type: "error" },
+  { inputs: [], name: "ReentrancyGuardReentrantCall", type: "error" },
+  {
+    inputs: [{ internalType: "address", name: "token", type: "address" }],
+    name: "SafeERC20FailedOperation",
+    type: "error",
+  },
+  { inputs: [], name: "TokenInactive", type: "error" },
+  { inputs: [], name: "TransferFailed", type: "error" },
+  { inputs: [], name: "UserBanned", type: "error" },
 
   "function owner() view returns (address)",
   "function paused() view returns (bool)",
@@ -79,18 +155,41 @@ export const ABI = [
 
   "event Voted(address indexed token, address indexed user, uint8 dir, uint256 xpEarned)",
   "event SnapshotCreated(uint256 indexed id, address indexed token, address indexed user, uint8 direction, uint64 timestamp)",
-];
+] as const;
+
+/**
+ * ✅ Tämä export puuttui ja aiheutti build-errorin:
+ * "CONTRACT_ABI is not exported"
+ */
+export const CONTRACT_ABI = ABI as unknown as Abi;
 
 /* ───────────────── CONTRACT ───────────────── */
 
-export const getContract = (signerOrProvider = provider) =>
-  new ethers.Contract(CONTRACT_ADDRESS, ABI, signerOrProvider);
+/**
+ * Vanha getContract palautti ethers.Contract.
+ * Nyt palautetaan viem-contract, mutta pidetään nimi ja signature jotta muu koodi ei hajoa.
+ */
+export const getContract = (signerOrProvider: any = provider) => {
+  // Read-only: käytetään publicClientia
+  // Write: käytetään wagmi walletClientia myöhemmin vote/claim-funktioissa
+  return viemGetContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    client: {
+      public: publicClient,
+    },
+  });
+};
 
 /* ───────────────── PLAYER ───────────────── */
 
-export const getPlayer = async (addr) => {
+export const getPlayer = async (addr: string) => {
   if (!addr) throw new Error("Missing address");
-  const r = await getContract().getPlayer(addr);
+  const contract = getContract();
+
+  // viem read
+  const r = (await contract.read.getPlayer([addr as Address])) as any;
+
   return {
     xp: Number(r[0]),
     level: Number(r[1]),
@@ -103,7 +202,7 @@ export const getPlayer = async (addr) => {
 
 /* ───────────────── HELPERS ───────────────── */
 
-const toBigInt = (v) => {
+const toBigInt = (v: any) => {
   try {
     if (typeof v === "bigint") return v;
     if (v == null) return 0n;
@@ -113,33 +212,33 @@ const toBigInt = (v) => {
   }
 };
 
-const toNum = (v) => (typeof v === "bigint" ? Number(v) : Number(v || 0));
-const secToMs = (sec) => toNum(sec) * 1000;
+const toNum = (v: any) => (typeof v === "bigint" ? Number(v) : Number(v || 0));
+const secToMs = (sec: any) => toNum(sec) * 1000;
 
 /* ───────────────── REVERT PARSER ───────────────── */
 
-const parseRevertError = (error, contract) => {
-  try {
-    const data = error.error?.data || error.data || error.reason;
-    if (data && typeof data === "string") {
-      const parsed = contract.interface.parseError(data);
-      if (parsed) return parsed.name;
-    }
-  } catch {}
-  return error.shortMessage || error.message || "Unknown contract error";
+const parseRevertError = (error: any) => {
+  return (
+    error?.shortMessage ||
+    error?.details ||
+    error?.message ||
+    "Unknown contract error"
+  );
 };
 
 /* ───────────────── TOKEN HELPERS ───────────────── */
 
-export const getTokenConfigSafe = async (token) => {
+export const getTokenConfigSafe = async (token: string) => {
   try {
-    const r = await getContract().tokenConfigs(token);
+    const contract = getContract();
+    const r = (await contract.read.tokenConfigs([token as Address])) as any;
+
     return {
-      enabled: r.enabled,
-      allowMultiple: r.allowMultiple,
-      maxVotes: toNum(r.maxVotes),
-      feeWei: toBigInt(r.feeWei),
-      xpReward: toBigInt(r.xpReward),
+      enabled: r[0],
+      allowMultiple: r[1],
+      maxVotes: toNum(r[2]),
+      feeWei: toBigInt(r[3]),
+      xpReward: toBigInt(r[4]),
     };
   } catch {
     return { enabled: false, feeWei: 0n };
@@ -148,13 +247,15 @@ export const getTokenConfigSafe = async (token) => {
 
 /* ✅ KORJAUS: SAFE METADATA */
 
-export const getTokenMetadataSafe = async (token) => {
+export const getTokenMetadataSafe = async (token: string) => {
   try {
-    const r = await getContract().tokenMetadata(token);
+    const contract = getContract();
+    const r = (await contract.read.tokenMetadata([token as Address])) as any;
+
     return {
-      name: r?.name?.toString?.() ?? "",
-      symbol: r?.symbol?.toString?.() ?? "",
-      logoURI: r?.logoURI?.toString?.() ?? "",
+      name: r?.[0]?.toString?.() ?? "",
+      symbol: r?.[1]?.toString?.() ?? "",
+      logoURI: r?.[2]?.toString?.() ?? "",
     };
   } catch {
     return { name: "", symbol: "", logoURI: "" };
@@ -162,56 +263,105 @@ export const getTokenMetadataSafe = async (token) => {
 };
 
 /* ───────────────── VOTING ───────────────── */
-export const voteOnChain = async (signer, token, direction, feeWei) => {
-  const contract = getContract(signer);
+
+export const voteOnChain = async (
+  signer: any, // pidetään parametri ettei vanha kutsu hajoa
+  token: string,
+  direction: number,
+  feeWei: any
+) => {
   const fee = BigInt(feeWei || 0);
 
-  const txOpts = {
-    value: fee,
-    gasLimit: 300_000n,
-  };
-
   try {
-    return await contract.vote(token, direction, txOpts);
-  } catch (error) {
+    // WalletClient wagmista (MiniApp + Desktop)
+    const walletClient = await getWalletClient(wagmiConfig);
+    if (!walletClient) throw new Error("No wallet client");
+
+    // Simuloi ensin (revertit näkyy oikein)
+    await simulateContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "vote",
+      args: [token as Address, direction],
+      value: fee,
+      chainId: base.id,
+    });
+
+    // Lähetä tx
+    const hash = await writeContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "vote",
+      args: [token as Address, direction],
+      value: fee,
+      chainId: base.id,
+    });
+
+    // Palautetaan ethers-tyylinen { hash } jotta vanha wait/poll toimii
+    return { hash };
+  } catch (error: any) {
     throw new Error(
-      error?.shortMessage ||
-      error?.reason ||
-      error?.message ||
-      "Vote failed"
+      error?.shortMessage || error?.message || "Vote failed"
     );
   }
 };
 
-
 /* ───────────────── QUEST CLAIM ───────────────── */
 
-export const claimQuestOnChain = async (signer, questId, feeWei) => {
-  const contract = getContract(signer);
+export const claimQuestOnChain = async (
+  signer: any, // pidetään parametri
+  questId: number,
+  feeWei: any
+) => {
   const fee = toBigInt(feeWei);
-  const options = fee > 0n ? { value: fee } : {};
+  const value = fee > 0n ? fee : 0n;
+
   try {
-    await contract.claimQuest.staticCall(questId, options);
-    return await contract.claimQuest(questId, options);
-  } catch (error) {
-    throw new Error(`Claim failed: ${parseRevertError(error, contract)}`);
+    // simulate (vastaa vanhaa staticCall-ideaa)
+    await simulateContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "claimQuest",
+      args: [BigInt(questId)],
+      value,
+      chainId: base.id,
+    });
+
+    const hash = await writeContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "claimQuest",
+      args: [BigInt(questId)],
+      value,
+      chainId: base.id,
+    });
+
+    return { hash };
+  } catch (error: any) {
+    throw new Error(`Claim failed: ${parseRevertError(error)}`);
   }
 };
 
-export const claimQuestOnChainAuto = async (questId) => {
-  const signer = await getEthersSigner();
-  const q = await getContract().quests(questId);
-  return claimQuestOnChain(signer, questId, q.feeWei);
+export const claimQuestOnChainAuto = async (questId: number) => {
+  // pidetään funktio olemassa (älä poista)
+  const contract = getContract();
+  const q = (await contract.read.quests([BigInt(questId)])) as any;
+  return claimQuestOnChain(null, questId, q?.[4]); // feeWei index tässä ABI:ssa
 };
 
 /* ───────────────── QUEST STATUS ───────────────── */
 
-export const canClaimQuestOnChain = async (signerOrProvider, questId) => {
-  const contract = getContract(signerOrProvider);
+export const canClaimQuestOnChain = async (signerOrProvider: any, questId: number) => {
   try {
-    await contract.claimQuest.staticCall(questId);
+    await simulateContract(wagmiConfig, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "claimQuest",
+      args: [BigInt(questId)],
+      chainId: base.id,
+    });
     return { canClaim: true };
-  } catch (e) {
+  } catch (e: any) {
     return { canClaim: false, reason: e?.shortMessage || e?.message };
   }
 };
@@ -226,31 +376,36 @@ export const getNextDailyResetMs = async () => {
 
 /* ───────────────── LISTINGS & CACHE ───────────────── */
 
-export const listingCount = async () =>
-  toNum(await getContract().listingCount());
+export const listingCount = async () => {
+  const contract = getContract();
+  const r = (await contract.read.listingCount()) as any;
+  return toNum(r);
+};
 
-export const getListing = async (id) => {
-  const r = await getContract().listings(id);
+export const getListing = async (id: any) => {
+  const contract = getContract();
+  const r = (await contract.read.listings([BigInt(id)])) as any;
+
   return {
     id: toNum(id),
-    dev: r.dev,
-    token: r.token,
-    rewardRemaining: toBigInt(r.rewardRemaining),
-    feePaid: toBigInt(r.feePaid),
-    rewardPerWinner: toBigInt(r.rewardPerWinner),
-    startTime: secToMs(r.startTime),
-    endTime: secToMs(r.endTime),
-    durationHours: toNum(r.durationHours),
-    winnersLimit: toNum(r.winnersLimit),
-    winnersClaimed: toNum(r.winnersClaimed),
-    status: toNum(r.status),
+    dev: r[0],
+    token: r[1],
+    rewardRemaining: toBigInt(r[2]),
+    feePaid: toBigInt(r[3]),
+    rewardPerWinner: toBigInt(r[4]),
+    startTime: secToMs(r[5]),
+    endTime: secToMs(r[6]),
+    durationHours: toNum(r[7]),
+    winnersLimit: toNum(r[8]),
+    winnersClaimed: toNum(r[9]),
+    status: toNum(r[10]),
   };
 };
 
-const cache = new Map();
+const cache = new Map<string, { v: any; t: number }>();
 const TTL = 15000;
 
-const cached = async (k, fn) => {
+const cached = async (k: string, fn: () => Promise<any>) => {
   const hit = cache.get(k);
   if (hit && Date.now() - hit.t < TTL) return hit.v;
   const v = await fn();
@@ -259,10 +414,13 @@ const cached = async (k, fn) => {
 };
 
 export const getActiveTokensCached = () =>
-  cached("tokens", () => getContract().getActiveTokens());
+  cached("tokens", async () => {
+    const contract = getContract();
+    return await contract.read.getActiveTokens();
+  });
 
-export const getTokenConfigCached = (t) =>
+export const getTokenConfigCached = (t: string) =>
   cached(`cfg:${t}`, () => getTokenConfigSafe(t));
 
-export const getTokenMetadataCached = (t) =>
+export const getTokenMetadataCached = (t: string) =>
   cached(`meta:${t}`, () => getTokenMetadataSafe(t));
