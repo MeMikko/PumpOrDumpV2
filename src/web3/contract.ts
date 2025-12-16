@@ -53,7 +53,7 @@ function getReadOnlyProvider() {
     typeof tag === "bigint" ? tag : BigInt(tag);
 
   return publicClient.getBlock({ blockNumber });
-}
+},
 
     /**
      * Vanha waitForReceipt tms saattaa käyttää tätä
