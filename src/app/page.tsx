@@ -266,7 +266,7 @@ export default function HomePage() {
         <div className="max-w-xl mx-auto text-center rounded-3xl border border-zinc-800 bg-zinc-950 p-10">
           <p className="text-zinc-300 font-bold text-lg">No active tokens</p>
           <p className="text-zinc-500 text-sm mt-2">
-            Contract ei palauta yhtään aktiivista tokenia tällä hetkellä.
+           Admin will add some soon!.
           </p>
         </div>
       ) : (
