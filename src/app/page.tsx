@@ -11,8 +11,10 @@ import {
   getLastVoteTimeSafe,
   CONTRACT_ADDRESS,
   CONTRACT_ABI,
-  contract, // 👈 viem contract instance
+  contract,
 } from "@/web3/contract";
+
+const BIRDEYE_API_KEY = process.env.NEXT_PUBLIC_BIRDEYE_API_KEY;
 
 type TokenRow = {
   address: `0x${string}`;
@@ -23,6 +25,7 @@ type TokenRow = {
   dump: number;
   feeWei: bigint;
   lastVoteAt: number | null;
+  price?: number | null; // 👈 lisäys
 };
 
 function isMiniApp() {
@@ -42,6 +45,31 @@ export default function HomePage() {
 
       try {
         const tokenAddresses = await getActiveTokens();
+
+        /* ───────── Birdeye: hae hinnat yhdellä requestilla ───────── */
+        let birdeyePrices: Record<string, { value?: number }> = {};
+        if (BIRDEYE_API_KEY && tokenAddresses.length > 0) {
+          try {
+            const res = await fetch(
+              `https://public-api.birdeye.so/defi/multi_price?list_address=${tokenAddresses
+                .map((a) => a.toLowerCase())
+                .join(",")}`,
+              {
+                headers: {
+                  "X-API-KEY": BIRDEYE_API_KEY,
+                  "x-chain": "base",
+                },
+              }
+            );
+
+            const json = await res.json();
+            birdeyePrices = json?.data ?? {};
+          } catch (e) {
+            console.error("Birdeye fetch failed", e);
+          }
+        }
+        /* ───────────────────────────────────────────────────────── */
+
         const rows: TokenRow[] = [];
 
         for (const token of tokenAddresses as `0x${string}`[]) {
@@ -60,6 +88,8 @@ export default function HomePage() {
             if (ts > 0n) lastVoteAt = Number(ts) * 1000;
           }
 
+          const bird = birdeyePrices[token.toLowerCase()];
+
           rows.push({
             address: token,
             name: meta.name,
@@ -69,6 +99,7 @@ export default function HomePage() {
             dump: Number(stats.dump),
             feeWei: cfg.feeWei ?? 0n,
             lastVoteAt,
+            price: bird?.value ?? null, // 👈 lisäys
           });
         }
 
@@ -81,40 +112,36 @@ export default function HomePage() {
     load();
   }, [address]);
 
-  // 🔥 TÄMÄ ON KRIITTINEN KOHTA
   async function vote(
-  token: `0x${string}`,
-  side: 0 | 1,
-  feeWei: bigint
-) {
-  // 🟣 MiniApp → viem write
-  if (isMiniApp()) {
-    if (!address) {
-      throw new Error("No MiniApp account available");
+    token: `0x${string}`,
+    side: 0 | 1,
+    feeWei: bigint
+  ) {
+    if (isMiniApp()) {
+      if (!address) {
+        throw new Error("No MiniApp account available");
+      }
+
+      const account = address as `0x${string}`;
+
+      await contract.write.vote(
+        [token, side],
+        {
+          account,
+          value: feeWei,
+        }
+      );
+      return;
     }
 
-    const account = address as `0x${string}`; // 🔥 tyyppikavennus
-
-    await contract.write.vote(
-      [token, side],
-      {
-        account,
-        value: feeWei,
-      }
-    );
-    return;
+    await writeContractAsync({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: "vote",
+      args: [token, side],
+      value: feeWei,
+    });
   }
-
-  // 🖥️ Desktop → wagmi write
-  await writeContractAsync({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: "vote",
-    args: [token, side],
-    value: feeWei,
-  });
-}
-
 
   if (loading) {
     return <div className="p-6 text-white">Loading tokens…</div>;
@@ -135,6 +162,13 @@ export default function HomePage() {
               <div className="text-xs text-zinc-400">
                 {t.name}
               </div>
+
+              {/* 💰 Birdeye price */}
+              {t.price != null && (
+                <div className="text-sm text-zinc-300 mt-1">
+                  ${t.price.toFixed(4)}
+                </div>
+              )}
             </div>
 
             {t.logoURI && (
