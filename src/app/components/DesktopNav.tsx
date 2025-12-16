@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ConnectButton } from "@/components/ConnectButton";
 
 export default function DesktopNav() {
   const pathname = usePathname();
@@ -20,6 +21,9 @@ export default function DesktopNav() {
         <Link href="/quests" className={linkClass("/quests")}>Quests</Link>
         <Link href="/leaderboard" className={linkClass("/leaderboard")}>Leaderboard</Link>
         <Link href="/profile" className={linkClass("/profile")}>Profile</Link>
+        <div className="ml-auto">
+            <ConnectButton />
+        </div>
       </div>
     </nav>
   );
