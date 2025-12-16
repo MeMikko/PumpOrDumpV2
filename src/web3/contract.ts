@@ -10,11 +10,7 @@ import {
   parseAbi,
 } from "viem";
 import { base } from "viem/chains";
-import {
-  getWalletClient,
-  simulateContract,
-  writeContract,
-} from "@wagmi/core";
+import { getWalletClient } from "@wagmi/core";
 
 import { wagmiConfig } from "@/web3/wagmi";
 
@@ -33,6 +29,7 @@ const publicClient = createPublicClient({
 });
 
 /* ───────────────── LEGACY PROVIDER ───────────────── */
+/* (säilytetään vanhaa koodia varten) */
 
 function getReadOnlyProvider() {
   return {
@@ -53,6 +50,7 @@ function getReadOnlyProvider() {
 export const provider = getReadOnlyProvider();
 
 /* ───────────────── ABI (UNCHANGED CONTENT) ───────────────── */
+/* HUOM: string-ABI:t pidetään, mutta parsitaan TURVALLISESTI */
 
 const RAW_ABI = [
   { inputs: [{ internalType: "address", name: "initialOwner", type: "address" }], stateMutability: "nonpayable", type: "constructor" },
@@ -72,7 +70,7 @@ const RAW_ABI = [
   { inputs: [], name: "TransferFailed", type: "error" },
   { inputs: [], name: "UserBanned", type: "error" },
 
-  // ⛔️ nämä STRING-ABI:t aiheuttivat kaatumisen
+  // Functions (string-muoto EI SAA mennä suoraan abitypeen)
   "function owner() view returns (address)",
   "function paused() view returns (bool)",
   "function CONTRACT_VERSION() view returns (string)",
@@ -85,12 +83,16 @@ const RAW_ABI = [
   "function listingCount() view returns (uint256)",
 ];
 
-/* ✅ TÄRKEIN KORJAUS */
+/* ───────────────── ABI PARSE (TÄRKEIN KORJAUS) ───────────────── */
+/* parseAbi tekee ABI:sta viem-kelpoisen eikä kaadu owner():iin */
+
 export const CONTRACT_ABI = parseAbi(
-  RAW_ABI.map((item) => item.toString())
+  RAW_ABI.map((item) =>
+    typeof item === "string" ? item : JSON.stringify(item)
+  )
 ) as Abi;
 
-/* ───────────────── CONTRACT ───────────────── */
+/* ───────────────── CONTRACT INSTANCE ───────────────── */
 
 export const getContract = () =>
   viemGetContract({
@@ -104,7 +106,14 @@ export const getContract = () =>
 export const getTokenConfigSafe = async (token: string) => {
   try {
     const c = getContract();
-    const r = (await c.read.tokenConfigs([token as Address])) as any;
+    const r = (await c.read.tokenConfigs([token as Address])) as readonly [
+      boolean,
+      boolean,
+      number,
+      bigint,
+      bigint
+    ];
+
     return {
       enabled: r[0],
       allowMultiple: r[1],
@@ -120,7 +129,12 @@ export const getTokenConfigSafe = async (token: string) => {
 export const getTokenMetadataSafe = async (token: string) => {
   try {
     const c = getContract();
-    const r = (await c.read.tokenMetadata([token as Address])) as any;
+    const r = (await c.read.tokenMetadata([token as Address])) as readonly [
+      string,
+      string,
+      string
+    ];
+
     return {
       name: r[0] ?? "",
       symbol: r[1] ?? "",
@@ -129,4 +143,24 @@ export const getTokenMetadataSafe = async (token: string) => {
   } catch {
     return { name: "", symbol: "", logoURI: "" };
   }
+};
+
+/* ───────────────── WRITE HELPERS (säilytetään) ───────────────── */
+
+export const voteOnChain = async (
+  token: Address,
+  direction: number,
+  feeWei: bigint
+) => {
+  const wallet = await getWalletClient(wagmiConfig);
+
+  if (!wallet) throw new Error("No wallet");
+
+  return wallet.writeContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "vote",
+    args: [token, direction],
+    value: feeWei,
+  });
 };
