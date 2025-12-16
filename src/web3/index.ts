@@ -1,3 +1,16 @@
+// src/web3/index.ts
+
 export * from "./wagmi";
-export * from "./client";
-export * from "./contract";
+
+// 👇 eksplisiittiset exportit clientista
+export { publicClient } from "./client";
+
+// 👇 contractista EI enää publicClientia
+export {
+  CONTRACT_ADDRESS,
+  CONTRACT_ABI,
+  contract,
+  getActiveTokens,
+  getTokenConfigSafe,
+  getTokenMetadataSafe,
+} from "./contract";
