@@ -22,46 +22,14 @@ export const publicClient = createPublicClient({
 /* ───────────────── ABI (FULL, OBJECT ONLY) ───────────────── */
 
 export const CONTRACT_ABI = [
-  /* ───── Core ───── */
+  /* ===== CORE ===== */
+  { type: "function", name: "owner", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { type: "function", name: "paused", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+  { type: "function", name: "CONTRACT_VERSION", stateMutability: "view", inputs: [], outputs: [{ type: "string" }] },
+  { type: "function", name: "VOTE_COOLDOWN", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
+  { type: "function", name: "seasonId", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 
-  {
-    type: "function",
-    name: "owner",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "address" }],
-  },
-  {
-    type: "function",
-    name: "paused",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "bool" }],
-  },
-  {
-    type: "function",
-    name: "CONTRACT_VERSION",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "string" }],
-  },
-  {
-    type: "function",
-    name: "VOTE_COOLDOWN",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "uint64" }],
-  },
-  {
-    type: "function",
-    name: "seasonId",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "uint256" }],
-  },
-
-  /* ───── Tokens ───── */
-
+  /* ===== TOKENS ===== */
   {
     type: "function",
     name: "getActiveTokens",
@@ -104,21 +72,29 @@ export const CONTRACT_ABI = [
     ],
   },
 
-  /* ───── Voting ───── */
-
+  /* ===== VOTING ===== */
   {
     type: "function",
-    name: "vote",
-    stateMutability: "payable",
+    name: "lastVoteTime",
+    stateMutability: "view",
     inputs: [
+      { name: "user", type: "address" },
       { name: "token", type: "address" },
-      { name: "dir", type: "uint8" },
     ],
-    outputs: [],
+    outputs: [{ type: "uint64" }],
+  },
+  {
+    type: "function",
+    name: "lastVote",
+    stateMutability: "view",
+    inputs: [
+      { name: "user", type: "address" },
+      { name: "token", type: "address" },
+    ],
+    outputs: [{ type: "uint8" }],
   },
 
-  /* ───── Listings ───── */
-
+  /* ===== LISTINGS ===== */
   {
     type: "function",
     name: "listingCount",
@@ -136,7 +112,7 @@ export const contract = getContract({
   client: publicClient,
 });
 
-/* ───────────────── HELPERS ───────────────── */
+/* ───────────────── SAFE HELPERS ───────────────── */
 
 export async function getActiveTokens() {
   return contract.read.getActiveTokens();
@@ -173,11 +149,19 @@ export async function getTokenMetadataSafe(token: Address) {
 export async function getTokenStatsSafe(token: Address) {
   try {
     const r = await contract.read.tokenStats([token]);
-    return {
-      pump: r[0],
-      dump: r[1],
-    };
+    return { pump: r[0], dump: r[1] };
   } catch {
     return { pump: 0n, dump: 0n };
+  }
+}
+
+export async function getLastVoteTimeSafe(
+  user: Address,
+  token: Address
+) {
+  try {
+    return await contract.read.lastVoteTime([user, token]);
+  } catch {
+    return 0n;
   }
 }
