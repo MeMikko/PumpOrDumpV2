@@ -18,7 +18,6 @@ const BASE_RPC =
 
 export const wagmiConfig = createConfig({
   ssr: false,
-  autoConnect: true,
 
   chains: [base],
   transports: {
@@ -26,15 +25,16 @@ export const wagmiConfig = createConfig({
   },
 
   connectors: [
-    /* 🟣 Farcaster MiniApp (autoconnect) */
+    /* 🟣 Farcaster MiniApp (Base MiniApp autoconnect) */
     farcasterMiniApp(),
 
-    /* 🖥️ Desktop wallets */
+    /* 🖥️ Desktop MetaMask / injected wallets */
     injected({
       target: "metaMask",
       shimDisconnect: true,
     }),
 
+    /* 🔗 WalletConnect (optional) */
     ...(WC_PROJECT_ID
       ? [
           walletConnect({
@@ -49,6 +49,7 @@ export const wagmiConfig = createConfig({
         ]
       : []),
 
+    /* 🔵 Coinbase Wallet */
     coinbaseWallet({
       appName: "Pump or Dump",
     }),
