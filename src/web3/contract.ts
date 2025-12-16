@@ -2,9 +2,6 @@
 // FINAL VERSION – December 13, 2025
 // All fixes included: token loading, vote, quest claim (no false InvalidInput), MiniApp compatibility, clear error messages
 
-import { ethers } from "ethers";
-import { getEthersSigner, getReadOnlyProvider } from "@/lib/getSigner";
-
 /* ───────────────── CONFIG ───────────────── */
 
 export const CONTRACT_ADDRESS =
