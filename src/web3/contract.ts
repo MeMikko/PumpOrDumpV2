@@ -45,18 +45,15 @@ function getReadOnlyProvider() {
      * Vanha koodi kutsuu provider.getBlock("latest")
      */
     async getBlock(tag: "latest" | bigint | number) {
-      const block = await publicClient.getBlock({
-        blockTag: tag === "latest" ? "latest" : undefined,
-        blockNumber:
-          typeof tag === "bigint"
-            ? tag
-            : typeof tag === "number"
-            ? BigInt(tag)
-            : undefined,
-      });
-      // block.timestamp on bigint viemissä → säilytetään jotta Number() toimii kutsujassa
-      return block;
-    },
+  if (tag === "latest") {
+    return publicClient.getBlock({ blockTag: "latest" });
+  }
+
+  const blockNumber =
+    typeof tag === "bigint" ? tag : BigInt(tag);
+
+  return publicClient.getBlock({ blockNumber });
+}
 
     /**
      * Vanha waitForReceipt tms saattaa käyttää tätä
