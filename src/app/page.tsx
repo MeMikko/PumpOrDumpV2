@@ -14,7 +14,7 @@ import {
   CONTRACT_ABI,
 } from "@/web3/contract";
 
-import NeonLoader from "@/components/NeonLoader";
+import NeonLoader from "@/app/components/NeonLoader";
 import Confetti from "@/app/components/Confetti";
 
 const BIRDEYE_API_KEY = process.env.NEXT_PUBLIC_BIRDEYE_API_KEY;
