@@ -3,59 +3,62 @@
 import * as React from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
-import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
+import {
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+
+/* ───────────────── ENV ───────────────── */
 
 const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WC_ID;
 const BASE_RPC =
   process.env.NEXT_PUBLIC_BASE_RPC_URL ??
   "https://base-mainnet.public.blastapi.io";
 
-/* ────────────────────────────────────────────── */
-/* Wagmi Config                                   */
-/* ────────────────────────────────────────────── */
+/* ───────────────── Wagmi Config ───────────────── */
 
 export const wagmiConfig = createConfig({
   ssr: false,
 
   chains: [base],
+
   transports: {
     [base.id]: http(BASE_RPC),
   },
 
-connectors: [
-  /* 🟣 Farcaster MiniApp */
-  farcasterMiniApp(),
+  connectors: [
+    // 🟣 Farcaster MiniApp (iframe / Base MiniApp)
+    farcasterMiniApp(),
 
-  /* 🦊 MetaMask desktop */
-  metaMask(),
+    // 🦊 MetaMask desktop extension
+    metaMask(),
 
-  /* 🔗 WalletConnect */
-  ...(WC_PROJECT_ID
-    ? [
-        walletConnect({
-          projectId: WC_PROJECT_ID,
-          metadata: {
-            name: "Pump or Dump",
-            description: "Predict → Earn → Dominate",
-            url: "https://pumpordump-app.vercel.app",
-            icons: ["https://pumpordump-app.vercel.app/icon.png"],
-          },
-        }),
-      ]
-    : []),
+    // 🔗 WalletConnect (QR / mobile)
+    ...(WC_PROJECT_ID
+      ? [
+          walletConnect({
+            projectId: WC_PROJECT_ID,
+            showQrModal: true,
+            metadata: {
+              name: "Pump or Dump",
+              description: "Predict → Earn → Dominate",
+              url: "https://pumpordump-app.vercel.app",
+              icons: ["https://pumpordump-app.vercel.app/icon.png"],
+            },
+          }),
+        ]
+      : []),
 
-  /* 🔵 Coinbase */
-  coinbaseWallet({
-    appName: "Pump or Dump",
-  }),
-],
+    // 🔵 Coinbase Wallet
+    coinbaseWallet({
+      appName: "Pump or Dump",
+    }),
+  ],
+});
 
-
-/* ────────────────────────────────────────────── */
-/* React Query                                    */
-/* ────────────────────────────────────────────── */
+/* ───────────────── React Query ───────────────── */
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,9 +69,7 @@ const queryClient = new QueryClient({
   },
 });
 
-/* ────────────────────────────────────────────── */
-/* Provider Wrapper                               */
-/* ────────────────────────────────────────────── */
+/* ───────────────── Providers ───────────────── */
 
 export default function Providers({
   children,
