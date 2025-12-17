@@ -94,6 +94,22 @@ export const CONTRACT_ABI = [
     ],
     outputs: [{ type: "uint64" }],
   },
+
+{
+  type: "function",
+  name: "getPlayer",
+  stateMutability: "view",
+  inputs: [{ name: "user", type: "address" }],
+  outputs: [
+    { type: "uint256" }, // xp
+    { type: "uint256" }, // level
+    { type: "uint32" },  // streak
+    { type: "uint32" },  // bestStreak
+    { type: "uint32" },  // totalQuests
+    { type: "uint32" },  // totalVotes
+  ],
+},
+
   {
     type: "function",
     name: "lastVote",
@@ -174,5 +190,21 @@ export async function getLastVoteTimeSafe(
     return await contract.read.lastVoteTime([user, token]);
   } catch {
     return 0n;
+  }
+}
+
+export async function getPlayerSafe(user: Address) {
+  try {
+    const r = await contract.read.getPlayer([user]);
+    return {
+      xp: Number(r[0] ?? 0n),
+      level: Number(r[1] ?? 0n),
+      streak: Number(r[2] ?? 0),
+      bestStreak: Number(r[3] ?? 0),
+      totalQuests: Number(r[4] ?? 0),
+      totalVotes: Number(r[5] ?? 0),
+    };
+  } catch {
+    return { xp: 0, level: 0, streak: 0, bestStreak: 0, totalQuests: 0, totalVotes: 0 };
   }
 }
