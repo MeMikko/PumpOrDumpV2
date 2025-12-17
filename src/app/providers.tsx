@@ -19,21 +19,18 @@ const BASE_RPC =
 
 export const wagmiConfig = createConfig({
   ssr: false,
-
   chains: [base],
-
   transports: {
     [base.id]: http(BASE_RPC),
   },
-
   connectors: [
-    // 🟣 Farcaster MiniApp (iframe / Base App)
+    // 🟣 Farcaster MiniApp
     farcasterMiniApp(),
 
-    // 🦊 MetaMask
-    metaMask(),
+    // 🦊 Desktop MetaMask & muut injected walletit
+    injected(),
 
-    // 🔗 WalletConnect
+    // 🔗 WalletConnect (mobile)
     ...(WC_PROJECT_ID
       ? [
           walletConnect({
@@ -55,6 +52,7 @@ export const wagmiConfig = createConfig({
     }),
   ],
 });
+
 
 /* ───────────────── React Query ───────────────── */
 
