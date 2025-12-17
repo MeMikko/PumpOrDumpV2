@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAccount, useWriteContract } from "wagmi";
-import { fetchBirdeyePrices } from "@/lib/Birdeye";
-
 
 import {
   getActiveTokens,
@@ -16,7 +14,7 @@ import {
   contract,
 } from "@/web3/contract";
 
-const BIRDEYE_API_KEY = process.env.NEXT_PUBLIC_BIRDEYE_API_KEY;
+/* ───────────────── TYPES ───────────────── */
 
 type TokenRow = {
   address: `0x${string}`;
@@ -27,12 +25,51 @@ type TokenRow = {
   dump: number;
   feeWei: bigint;
   lastVoteAt: number | null;
-  price?: number | null; // 👈 lisäys
+  price: number | null;
 };
+
+/* ───────────────── HELPERS ───────────────── */
 
 function isMiniApp() {
   return typeof window !== "undefined" && (window as any).fc;
 }
+
+/* ───────────────── UI: NEON LOADER ───────────────── */
+
+function NeonLoader() {
+  return (
+    <div className="flex justify-center py-10">
+      <div className="pixel-text text-neon animate-pulse">
+        LOADING TOKENS…
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────── UI: SKELETON CARD ───────────────── */
+
+function TokenSkeleton() {
+  return (
+    <div className="retro-card animate-pulse">
+      <div className="flex justify-between">
+        <div className="space-y-2">
+          <div className="h-4 w-24 bg-zinc-700 rounded-sm" />
+          <div className="h-3 w-32 bg-zinc-800 rounded-sm" />
+        </div>
+        <div className="h-10 w-10 bg-zinc-700 rounded-sm" />
+      </div>
+
+      <div className="mt-4 h-3 w-20 bg-zinc-800 rounded-sm" />
+
+      <div className="mt-4 flex gap-3">
+        <div className="flex-1 h-9 bg-zinc-800 rounded-sm" />
+        <div className="flex-1 h-9 bg-zinc-800 rounded-sm" />
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────── PAGE ───────────────── */
 
 export default function HomePage() {
   const { address, isConnected } = useAccount();
@@ -46,14 +83,17 @@ export default function HomePage() {
       setLoading(true);
 
       try {
-        const tokenAddresses = await getActiveTokens();
+        const addresses = await getActiveTokens();
+        const rows: TokenRow[] = [];
 
-        /* ───────── Birdeye: hae hinnat yhdellä requestilla ───────── */
-        let birdeyePrices: Record<string, { value?: number }> = {};
-        if (BIRDEYE_API_KEY && tokenAddresses.length > 0) {
+        /* 🔹 Birdeye */
+        const BIRDEYE_API_KEY = process.env.NEXT_PUBLIC_BIRDEYE_API_KEY;
+        let prices: Record<string, number> = {};
+
+        if (BIRDEYE_API_KEY) {
           try {
             const res = await fetch(
-              `https://public-api.birdeye.so/defi/multi_price?list_address=${tokenAddresses
+              `https://public-api.birdeye.so/defi/multi_price?list_address=${addresses
                 .map((a) => a.toLowerCase())
                 .join(",")}`,
               {
@@ -63,18 +103,16 @@ export default function HomePage() {
                 },
               }
             );
-
             const json = await res.json();
-            birdeyePrices = json?.data ?? {};
-          } catch (e) {
-            console.error("Birdeye fetch failed", e);
-          }
+            if (json?.data) {
+              for (const [addr, d] of Object.entries(json.data)) {
+                prices[addr.toLowerCase()] = (d as any)?.value ?? null;
+              }
+            }
+          } catch {}
         }
-        /* ───────────────────────────────────────────────────────── */
 
-        const rows: TokenRow[] = [];
-
-        for (const token of tokenAddresses as `0x${string}`[]) {
+        for (const token of addresses as `0x${string}`[]) {
           const cfg = await getTokenConfigSafe(token);
           if (!cfg.enabled) continue;
 
@@ -83,14 +121,9 @@ export default function HomePage() {
 
           let lastVoteAt: number | null = null;
           if (address) {
-            const ts = await getLastVoteTimeSafe(
-              address as `0x${string}`,
-              token
-            );
+            const ts = await getLastVoteTimeSafe(address, token);
             if (ts > 0n) lastVoteAt = Number(ts) * 1000;
           }
-
-          const bird = birdeyePrices[token.toLowerCase()];
 
           rows.push({
             address: token,
@@ -101,7 +134,7 @@ export default function HomePage() {
             dump: Number(stats.dump),
             feeWei: cfg.feeWei ?? 0n,
             lastVoteAt,
-            price: bird?.value ?? null, // 👈 lisäys
+            price: prices[token.toLowerCase()] ?? null,
           });
         }
 
@@ -114,25 +147,15 @@ export default function HomePage() {
     load();
   }, [address]);
 
-  async function vote(
-    token: `0x${string}`,
-    side: 0 | 1,
-    feeWei: bigint
-  ) {
+  /* ───────────────── VOTE ───────────────── */
+
+  async function vote(token: `0x${string}`, side: 0 | 1, feeWei: bigint) {
     if (isMiniApp()) {
-      if (!address) {
-        throw new Error("No MiniApp account available");
-      }
-
-      const account = address as `0x${string}`;
-
-      await contract.write.vote(
-        [token, side],
-        {
-          account,
-          value: feeWei,
-        }
-      );
+      if (!address) throw new Error("No MiniApp account");
+      await contract.write.vote([token, side], {
+        account: address,
+        value: feeWei,
+      });
       return;
     }
 
@@ -145,29 +168,31 @@ export default function HomePage() {
     });
   }
 
+  /* ───────────────── RENDER ───────────────── */
+
   if (loading) {
-    return <div className="p-6 text-white">Loading tokens…</div>;
+    return (
+      <div className="p-6 space-y-6 bg-black min-h-screen">
+        <NeonLoader />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <TokenSkeleton key={i} />
+        ))}
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6 bg-black text-white">
+    <div className="p-6 space-y-6 bg-black min-h-screen text-white">
       {tokens.map((t) => (
-        <div
-          key={t.address}
-          className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4"
-        >
+        <div key={t.address} className="retro-card">
           <div className="flex justify-between items-center">
             <div>
-              <div className="font-bold text-lg">
-                {t.symbol || t.address}
+              <div className="pixel-text text-lg">
+                {t.symbol || "TOKEN"}
               </div>
-              <div className="text-xs text-zinc-400">
-                {t.name}
-              </div>
-
-              {/* 💰 Birdeye price */}
+              <div className="text-xs text-zinc-400">{t.name}</div>
               {t.price != null && (
-                <div className="text-sm text-zinc-300 mt-1">
+                <div className="text-sm text-neon mt-1">
                   ${t.price.toFixed(4)}
                 </div>
               )}
@@ -176,13 +201,13 @@ export default function HomePage() {
             {t.logoURI && (
               <img
                 src={t.logoURI}
-                className="h-10 w-10 rounded-full"
+                className="h-10 w-10 pixel-img"
                 alt=""
               />
             )}
           </div>
 
-          <div className="mt-3 text-sm text-zinc-400">
+          <div className="mt-3 text-xs text-zinc-400">
             👍 {t.pump} · 👎 {t.dump}
           </div>
 
@@ -190,7 +215,7 @@ export default function HomePage() {
             <button
               disabled={!isConnected && !isMiniApp()}
               onClick={() => vote(t.address, 0, t.feeWei)}
-              className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
+              className="retro-btn neon-green"
             >
               PUMP
             </button>
@@ -198,7 +223,7 @@ export default function HomePage() {
             <button
               disabled={!isConnected && !isMiniApp()}
               onClick={() => vote(t.address, 1, t.feeWei)}
-              className="flex-1 bg-red-500 text-black font-bold py-2 rounded-xl disabled:bg-zinc-700"
+              className="retro-btn neon-red"
             >
               DUMP
             </button>
