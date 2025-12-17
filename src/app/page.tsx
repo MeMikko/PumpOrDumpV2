@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount, useWriteContract } from "wagmi;
+import { useAccount, useWriteContract } from "wagmi
 import { fetchBirdeyePrices } from "./components/birdeye";
 
 
