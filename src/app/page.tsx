@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAccount, useWriteContract } from "wagmi";
 import type { Address } from "viem";
 
-import Typewriter from "@/components/Typewriter";
+import Typewriter from "../components/Typewriter";
 
 import {
   getActiveTokens,
