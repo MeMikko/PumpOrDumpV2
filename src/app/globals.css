@@ -1,5 +1,5 @@
 @tailwind base;
-@tailwind components;
+@tailwind components;.pod
 @tailwind utilities;
 
 /* ───────────────── Fonts ───────────────── */
@@ -203,20 +203,55 @@ body::before {
 }
 
 .pod-card {
+  position: relative; /* 👈 logo corner */
   background: #07071d;
   border: 2px solid #1f2937;
   padding: 14px;
 }
 
+/* ───────── Top area ───────── */
+
+.pod-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .pod-card__symbol {
   font-size: 10px;
   color: #22d3ee;
+  letter-spacing: 0.04em;
 }
 
 .pod-card__name {
   font-size: 8px;
   color: #9ca3af;
+  margin-top: 2px;
 }
+
+/* ───────── Price + Change ───────── */
+
+.pod-price {
+  margin-top: 6px;
+  font-size: 10px;
+  color: #e5e7eb;
+}
+
+.pod-change {
+  margin-top: 2px;
+  font-size: 8px;
+  opacity: 0.9;
+}
+
+.pod-change--up {
+  color: #22c55e;
+}
+
+.pod-change--down {
+  color: #ef4444;
+}
+
+/* ───────── Logo corner ───────── */
 
 .pod-logo {
   width: 32px;
@@ -224,11 +259,35 @@ body::before {
   border-radius: 4px;
 }
 
+.pod-logo--corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+}
+
+.pod-logo--empty {
+  background: #111827;
+}
+
+/* ───────── Stats ───────── */
+
 .pod-stats {
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 8px;
   color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
+.pod-sep {
+  opacity: 0.5;
+}
+
+/* ───────── Actions ───────── */
 
 .pod-actions-row {
   margin-top: 12px;
@@ -241,6 +300,8 @@ body::before {
   font-size: 8px;
   padding: 8px 0;
   border: 2px solid;
+  background: transparent;
+  cursor: pointer;
 }
 
 .pod-vote--pump {
