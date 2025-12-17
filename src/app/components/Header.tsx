@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useConnect, useDisconnect } from "wagmi";
-import { SignInButton } from "@farcaster/auth-kit";
 import { useAuthGate } from "@/identity/useAuthGate";
 
 function shortAddr(addr?: string) {
@@ -48,11 +47,6 @@ export default function Header() {
           >
             {isPending ? "CONNECTING…" : "CONNECT WALLET"}
           </button>
-        )}
-
-        {/* 🧩 Farcaster puuttuu (desktop only) */}
-        {auth.state === "needs-farcaster" && (
-          <SignInButton />
         )}
 
         {/* ✅ Valmis */}
