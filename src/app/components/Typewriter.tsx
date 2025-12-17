@@ -2,48 +2,30 @@
 
 import { useEffect, useState } from "react";
 
-type Props = {
-  words?: string[];
-  speed?: number;
-  pause?: number;
-};
-
 export default function Typewriter({
-  words = ["Predict", "Earn", "Dominate"],
-  speed = 60,
-  pause = 900,
-}: Props) {
-  const [wordIndex, setWordIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
+  text = "Vote on Base. Earn XP. Claim Rewards.",
+  speed = 40,
+}: {
+  text?: string;
+  speed?: number;
+}) {
   const [out, setOut] = useState("");
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const current = words[wordIndex];
+    let i = 0;
+    setOut("");
 
-    const tick = setTimeout(() => {
-      if (!deleting) {
-        const next = current.slice(0, charIndex + 1);
-        setOut(next);
-        setCharIndex((c) => c + 1);
+    const id = setInterval(() => {
+      setOut(text.slice(0, i + 1));
+      i++;
 
-        if (charIndex + 1 === current.length) {
-          setTimeout(() => setDeleting(true), pause);
-        }
-      } else {
-        const next = current.slice(0, Math.max(0, charIndex - 1));
-        setOut(next);
-        setCharIndex((c) => c - 1);
-
-        if (charIndex - 1 <= 0) {
-          setDeleting(false);
-          setWordIndex((i) => (i + 1) % words.length);
-        }
+      if (i >= text.length) {
+        clearInterval(id);
       }
-    }, deleting ? speed / 2 : speed);
+    }, speed);
 
-    return () => clearTimeout(tick);
-  }, [words, wordIndex, charIndex, deleting, speed, pause]);
+    return () => clearInterval(id);
+  }, [text, speed]);
 
   return (
     <div className="pixel-text text-center text-zinc-300 text-sm mt-6">
