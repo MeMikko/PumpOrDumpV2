@@ -5,10 +5,8 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
 import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
-import {
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthKitProvider } from "@farcaster/auth-kit";
 
 /* ───────────────── ENV ───────────────── */
 
@@ -29,13 +27,13 @@ export const wagmiConfig = createConfig({
   },
 
   connectors: [
-    // 🟣 Farcaster MiniApp (iframe / Base MiniApp)
+    // 🟣 Farcaster MiniApp (iframe / Base App)
     farcasterMiniApp(),
 
-    // 🦊 MetaMask desktop extension
+    // 🦊 MetaMask
     metaMask(),
 
-    // 🔗 WalletConnect (QR / mobile)
+    // 🔗 WalletConnect
     ...(WC_PROJECT_ID
       ? [
           walletConnect({
@@ -76,11 +74,26 @@ export default function Providers({
 }: {
   children: React.ReactNode;
 }) {
+  const authConfig = {
+    domain:
+      typeof window !== "undefined"
+        ? window.location.host
+        : "pumpordump-app.vercel.app",
+    siweUri:
+      typeof window !== "undefined"
+        ? window.location.href
+        : "https://pumpordump-app.vercel.app",
+    relay: "https://relay.farcaster.xyz",
+    rpcUrl: BASE_RPC,
+  };
+
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <AuthKitProvider config={authConfig}>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </AuthKitProvider>
     </WagmiProvider>
   );
 }
