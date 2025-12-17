@@ -87,11 +87,6 @@ export default function RootLayout({
           <MiniAppInit />
           <SvgSizeNormalizer />
 
-          {/* Desktop navigation */}
-          <div className="hidden md:block">
-            <DesktopNav />
-          </div>
-
           {/* ✅ Global Header (no tagline here) */}
           <AppHeader />
 
