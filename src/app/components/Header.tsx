@@ -1,41 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useAccount, useEnsName } from "wagmi";
-import { getFarcasterUser } from "@/lib/farcaster";
-
-function shorten(addr: string) {
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
+import { useDisplayName } from "@/hooks/useDisplayName";
 
 export default function Header() {
-  const { address, isConnected } = useAccount();
-
-  /* ✅ ENS = MAINNET */
-  const { data: ensName } = useEnsName({
-    address,
-    chainId: 1,
-    query: { enabled: Boolean(address) },
-  });
-
-  const [farcasterName, setFarcasterName] = useState<string | null>(null);
-
-  useEffect(() => {
-    getFarcasterUser().then((u) => {
-      if (u?.username) setFarcasterName(u.username);
-    });
-  }, []);
-
-  let displayName: string | null = null;
-
-  if (ensName) {
-    displayName = ensName;
-  } else if (farcasterName) {
-    displayName = `@${farcasterName}`;
-  } else if (address) {
-    displayName = shorten(address);
-  }
+  const { displayName, isConnected } = useDisplayName();
 
   return (
     <header className="sticky top-0 z-50 bg-black border-b-4 border-neon px-6 py-4">
