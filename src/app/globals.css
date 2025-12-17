@@ -179,3 +179,72 @@ body::before {
 *::after {
   box-sizing: border-box;
 }
+
+
+/* ───── Retro Font ───── */
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+/* ───── Base ───── */
+body {
+  background: #050508;
+  color: #e5e7eb;
+  image-rendering: pixelated;
+}
+
+/* ───── Pixel Text ───── */
+.pixel-text {
+  font-family: "Press Start 2P", monospace;
+  letter-spacing: 0.05em;
+}
+
+/* ───── Neon Colors ───── */
+.text-neon {
+  color: #00ffff;
+  text-shadow: 0 0 6px rgba(0,255,255,0.8);
+}
+
+.text-neon-pink {
+  color: #ff00ff;
+  text-shadow: 0 0 8px rgba(255,0,255,0.9);
+}
+
+/* ───── Retro Card ───── */
+.retro-card {
+  background: #0b0b12;
+  border: 2px solid #1f2937;
+  padding: 1rem;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 12px rgba(0,255,255,0.15);
+}
+
+/* ───── Pixel Image ───── */
+.pixel-img {
+  image-rendering: pixelated;
+  border: 2px solid #1f2937;
+}
+
+/* ───── Retro Buttons ───── */
+.retro-btn {
+  flex: 1;
+  font-family: "Press Start 2P", monospace;
+  font-size: 0.65rem;
+  padding: 0.75rem 0;
+  border: 2px solid #000;
+  text-shadow: 1px 1px 0 #000;
+  transition: transform 0.05s;
+}
+
+.retro-btn:active {
+  transform: translateY(2px);
+}
+
+.neon-green {
+  background: #00ff6a;
+  color: #000;
+}
+
+.neon-red {
+  background: #ff3b3b;
+  color: #000;
+}
