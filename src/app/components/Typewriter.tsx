@@ -2,19 +2,48 @@
 
 import { useEffect, useState } from "react";
 
-export default function Typewriter({ text }: { text: string }) {
+type Props = {
+  words?: string[];
+  speed?: number;
+  pause?: number;
+};
+
+export default function Typewriter({
+  words = ["Predict", "Earn", "Dominate"],
+  speed = 60,
+  pause = 900,
+}: Props) {
+  const [wordIndex, setWordIndex] = useState(0);
+  const [charIndex, setCharIndex] = useState(0);
   const [out, setOut] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    let i = 0;
-    const id = setInterval(() => {
-      setOut(text.slice(0, i + 1));
-      i++;
-      if (i >= text.length) clearInterval(id);
-    }, 40);
+    const current = words[wordIndex];
 
-    return () => clearInterval(id);
-  }, [text]);
+    const tick = setTimeout(() => {
+      if (!deleting) {
+        const next = current.slice(0, charIndex + 1);
+        setOut(next);
+        setCharIndex((c) => c + 1);
+
+        if (charIndex + 1 === current.length) {
+          setTimeout(() => setDeleting(true), pause);
+        }
+      } else {
+        const next = current.slice(0, Math.max(0, charIndex - 1));
+        setOut(next);
+        setCharIndex((c) => c - 1);
+
+        if (charIndex - 1 <= 0) {
+          setDeleting(false);
+          setWordIndex((i) => (i + 1) % words.length);
+        }
+      }
+    }, deleting ? speed / 2 : speed);
+
+    return () => clearTimeout(tick);
+  }, [words, wordIndex, charIndex, deleting, speed, pause]);
 
   return (
     <div className="pixel-text text-center text-zinc-300 text-sm mt-6">
