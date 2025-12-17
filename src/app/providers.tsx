@@ -3,7 +3,7 @@
 import * as React from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
-import { metaMask, walletConnect, coinbaseWallet } from "wagmi/connectors";
+import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthKitProvider } from "@farcaster/auth-kit";
