@@ -83,8 +83,7 @@ export default function Providers({
     relay: "https://relay.farcaster.xyz",
     rpcUrl: BASE_RPC,
   };
-
-  return (
+  
     return (
   <WagmiProvider config={wagmiConfig}>
     <QueryClientProvider client={queryClient}>
