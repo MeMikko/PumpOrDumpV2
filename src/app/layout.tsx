@@ -6,6 +6,7 @@ import dynamicImport from "next/dynamic";
 
 import Providers from "./providers"; // ✅ oikea polku ja casing
 import SvgSizeNormalizer from "./components/SvgSizeNormalizer";
+import AppHeader from "./components/AppHeader";
 
 const BottomNav = dynamicImport(() => import("./components/BottomNav"), {
   ssr: false,
@@ -90,6 +91,9 @@ export default function RootLayout({
           <div className="hidden md:block">
             <DesktopNav />
           </div>
+
+          {/* ✅ Global Header (no tagline here) */}
+          <AppHeader />
 
           {/* App content */}
           {children}
