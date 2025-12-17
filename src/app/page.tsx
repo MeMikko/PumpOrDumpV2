@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount, useWriteContract } from "wagmi";
 import type { Address } from "viem";
+
+import Typewriter from "@/components/Typewriter";
 
 import {
   getActiveTokens,
@@ -12,7 +14,7 @@ import {
   getLastVoteTimeSafe,
   CONTRACT_ADDRESS,
   CONTRACT_ABI,
-  contract, // viem contract instance
+  contract,
 } from "@/web3/contract";
 
 type TokenRow = {
@@ -37,53 +39,12 @@ function formatUsd(n?: number | null) {
   return `$${n.toFixed(8)}`;
 }
 
-function useTypewriter(lines: string[], speed = 28, pause = 900) {
-  const [text, setText] = useState("");
-  const [lineIdx, setLineIdx] = useState(0);
-  const [charIdx, setCharIdx] = useState(0);
-  const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    const current = lines[lineIdx] ?? "";
-    const tick = setTimeout(() => {
-      if (!deleting) {
-        const next = current.slice(0, charIdx + 1);
-        setText(next);
-        setCharIdx((c) => c + 1);
-
-        if (charIdx + 1 >= current.length) {
-          setTimeout(() => setDeleting(true), pause);
-        }
-      } else {
-        const next = current.slice(0, Math.max(0, charIdx - 1));
-        setText(next);
-        setCharIdx((c) => Math.max(0, c - 1));
-
-        if (charIdx - 1 <= 0) {
-          setDeleting(false);
-          setLineIdx((i) => (i + 1) % lines.length);
-        }
-      }
-    }, deleting ? Math.max(14, speed / 2) : speed);
-
-    return () => clearTimeout(tick);
-  }, [lines, lineIdx, charIdx, deleting, speed, pause]);
-
-  return text;
-}
-
 export default function HomePage() {
   const { address, isConnected } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const tagline = useTypewriter(
-  ["VOTE.", "EARN.", "CLAIM."],
-  26,
-  900
-);
 
   const BIRDEYE_API_KEY =
     process.env.NEXT_PUBLIC_BIRDEYE_API_KEY ||
@@ -127,7 +88,7 @@ export default function HomePage() {
           });
         }
 
-        // ✅ Birdeye multi_price (sun määrittämällä tavalla)
+        // Birdeye prices
         if (BIRDEYE_API_KEY && rows.length) {
           try {
             const addresses = rows.map((r) => r.address);
@@ -171,19 +132,17 @@ export default function HomePage() {
   }, [address, BIRDEYE_API_KEY]);
 
   async function vote(token: `0x${string}`, side: 0 | 1, feeWei: bigint) {
-    // 🟣 MiniApp → viem write
+    // MiniApp → viem
     if (isMiniApp()) {
       if (!address) throw new Error("No MiniApp account available");
-      const account = address as `0x${string}`;
-
       await contract.write.vote([token, side], {
-        account,
+        account: address as `0x${string}`,
         value: feeWei,
       });
       return;
     }
 
-    // 🖥️ Desktop → wagmi write
+    // Desktop → wagmi
     await writeContractAsync({
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -195,19 +154,13 @@ export default function HomePage() {
 
   return (
     <div className="pod-page">
-      {/* HERO / TAGLINE (typewriter täällä, ei headerissa) */}
+      {/* HERO */}
       <section className="pod-hero">
         <div className="pod-hero__frame">
           <div className="pod-hero__kicker">SEASON MODE</div>
 
-          <div className="pod-type">
-            <span className="pod-type__text">{tagline}</span>
-            <span className="pod-type__cursor" aria-hidden="true" />
-          </div>
+          <Typewriter text="Vote on Base. Earn XP. Claim Rewards." />
 
-          <div className="pod-hero__hint">
-            Vote on Base. Earn XP. Claim Rewards.
-          </div>
         </div>
       </section>
 
