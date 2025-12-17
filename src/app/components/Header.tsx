@@ -20,12 +20,6 @@ export default function Header() {
           {identity.type === "farcaster" ? (
             <>
               {identity.pfp && (
-                <img
-                  src={identity.pfp}
-                  className="h-8 w-8 rounded-full"
-                  alt=""
-                />
-              )}
               <span>@{identity.username ?? `fid:${identity.fid}`}</span>
               <span className="h-2 w-2 rounded-full bg-green-500" />
             </>
