@@ -80,10 +80,10 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   const tagline = useTypewriter(
-    ["PREDICT THE TREND.", "EARN XP.", "DOMINATE THE SEASON."],
-    26,
-    900
-  );
+  ["VOTE.", "EARN.", "CLAIM."],
+  26,
+  900
+);
 
   const BIRDEYE_API_KEY =
     process.env.NEXT_PUBLIC_BIRDEYE_API_KEY ||
@@ -199,7 +199,6 @@ export default function HomePage() {
       <section className="pod-hero">
         <div className="pod-hero__frame">
           <div className="pod-hero__kicker">SEASON MODE</div>
-          <h1 className="pod-hero__title">PUMP OR DUMP</h1>
 
           <div className="pod-type">
             <span className="pod-type__text">{tagline}</span>
@@ -207,7 +206,7 @@ export default function HomePage() {
           </div>
 
           <div className="pod-hero__hint">
-            Vote on Base. Earn XP. Claim quests.
+            Vote on Base. Earn XP. Claim Rewards.
           </div>
         </div>
       </section>
