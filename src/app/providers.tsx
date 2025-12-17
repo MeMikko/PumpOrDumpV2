@@ -6,7 +6,6 @@ import { base } from "wagmi/chains";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthKitProvider } from "@farcaster/auth-kit";
 
 /* ───────────────── ENV ───────────────── */
 
@@ -86,12 +85,11 @@ export default function Providers({
   };
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <AuthKitProvider config={authConfig}>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
-      </AuthKitProvider>
-    </WagmiProvider>
-  );
+    return (
+  <WagmiProvider config={wagmiConfig}>
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  </WagmiProvider>
+);
 }
