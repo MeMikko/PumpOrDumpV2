@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { SignInButton, useProfile } from "@farcaster/auth-kit";
 import type { Address } from "viem";
 
 import { getPlayerSafe } from "@/web3/contract";
@@ -14,8 +13,7 @@ function shortAddr(a?: string) {
 }
 
 async function tryResolveEns(address: Address): Promise<string | null> {
-  // ENS on “nice-to-have”. Jos sulla ei ole ENS-clienttiä nyt, palautetaan null hiljaa.
-  // (pidetään tämä turvallisena eikä tuoda lisää riippuvuuksia)
+  // ENS on optional
   return null;
 }
 
@@ -23,9 +21,6 @@ export default function AppHeader() {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { connect, connectors, isPending } = useConnect();
-
-  // SIWF profile (desktopille)
-  const { isAuthenticated, profile } = useProfile();
 
   const [ens, setEns] = React.useState<string | null>(null);
   const [xp, setXp] = React.useState<number>(0);
@@ -44,7 +39,7 @@ export default function AppHeader() {
         return;
       }
 
-      // XP/Level contractilta
+      // XP / Level contractilta
       try {
         const p = await getPlayerSafe(address as Address);
         if (!alive) return;
@@ -73,23 +68,21 @@ export default function AppHeader() {
   }, [address]);
 
   const display =
-    profile?.username ||
     ens ||
     (address ? shortAddr(address) : "Not connected");
 
   const avatarUrl =
-    profile?.pfpUrl ||
-    // fallback: pieni pixel-placeholder
+    // fallback avatar
     "data:image/svg+xml;utf8," +
-      encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
-          <rect width="64" height="64" fill="#0b0b0f"/>
-          <rect x="8" y="8" width="48" height="48" fill="#111827"/>
-          <rect x="16" y="18" width="8" height="8" fill="#22d3ee"/>
-          <rect x="40" y="18" width="8" height="8" fill="#22d3ee"/>
-          <rect x="24" y="40" width="16" height="6" fill="#a3a3a3"/>
-        </svg>`
-      );
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+        <rect width="64" height="64" fill="#0b0b0f"/>
+        <rect x="8" y="8" width="48" height="48" fill="#111827"/>
+        <rect x="16" y="18" width="8" height="8" fill="#22d3ee"/>
+        <rect x="40" y="18" width="8" height="8" fill="#22d3ee"/>
+        <rect x="24" y="40" width="16" height="6" fill="#a3a3a3"/>
+      </svg>`
+    );
 
   return (
     <header className="pod-header">
@@ -113,24 +106,23 @@ export default function AppHeader() {
             </div>
           </div>
 
-          {/* Desktop wallet connect + SIWF */}
+          {/* Wallet connect only */}
           <div className="pod-actions">
             {!isConnected ? (
               <button
                 className="pod-btn"
                 disabled={isPending}
                 onClick={() => {
-                  // valitaan “injected” jos löytyy, muuten eka connector
-                  const injected = connectors.find((c) => c.id === "injected");
-                  connect({ connector: injected ?? connectors[0] });
+                  const injected = connectors.find(
+                    (c) => c.id === "injected"
+                  );
+                  if (injected) {
+                    connect({ connector: injected });
+                  }
                 }}
               >
                 {isPending ? "CONNECTING…" : "CONNECT"}
               </button>
-            ) : !isAuthenticated ? (
-              <div className="pod-siwf">
-                <SignInButton />
-              </div>
             ) : (
               <button className="pod-btn" onClick={() => disconnect()}>
                 DISCONNECT
