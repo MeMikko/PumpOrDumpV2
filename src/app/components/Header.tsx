@@ -19,8 +19,18 @@ export default function Header() {
         <div className="flex items-center gap-3 text-sm">
           {identity.type === "farcaster" ? (
             <>
-              {identity.pfp && (
-              <span>@{identity.username ?? `fid:${identity.fid}`}</span>
+              {identity.pfpUrl && (
+                <img
+                  src={identity.pfpUrl}
+                  alt="pfp"
+                  className="h-6 w-6 rounded-full"
+                />
+              )}
+
+              <span>
+                @{identity.username ?? `fid:${identity.fid}`}
+              </span>
+
               <span className="h-2 w-2 rounded-full bg-green-500" />
             </>
           ) : (
