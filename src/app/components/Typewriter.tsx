@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 
 export default function Typewriter({
-  text = "Vote on Base. Earn XP. Claim Rewards.",
+  text,
   speed = 40,
 }: {
-  text?: string;
+  text: string;
   speed?: number;
 }) {
   const [out, setOut] = useState("");
@@ -19,9 +19,7 @@ export default function Typewriter({
       setOut(text.slice(0, i + 1));
       i++;
 
-      if (i >= text.length) {
-        clearInterval(id);
-      }
+      if (i >= text.length) clearInterval(id);
     }, speed);
 
     return () => clearInterval(id);
