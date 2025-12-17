@@ -27,6 +27,7 @@ type TokenRow = {
   feeWei: bigint;
   lastVoteAt: number | null;
   priceUsd?: number | null;
+  priceChange24h?: number | null;
 };
 
 function isMiniApp() {
@@ -34,9 +35,15 @@ function isMiniApp() {
 }
 
 function formatUsd(n?: number | null) {
-  if (!n || !Number.isFinite(n)) return "—";
+  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
   if (n >= 1) return `$${n.toFixed(4)}`;
   return `$${n.toFixed(8)}`;
+}
+
+function formatChange(n?: number | null) {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(2)}%`;
 }
 
 export default function HomePage() {
@@ -52,6 +59,8 @@ export default function HomePage() {
     "";
 
   useEffect(() => {
+    let alive = true;
+
     async function load() {
       setLoading(true);
 
@@ -85,10 +94,11 @@ export default function HomePage() {
             feeWei: cfg.feeWei ?? 0n,
             lastVoteAt,
             priceUsd: null,
+            priceChange24h: null,
           });
         }
 
-        // Birdeye prices
+        // Birdeye prices (+ 24h change)
         if (BIRDEYE_API_KEY && rows.length) {
           try {
             const addresses = rows.map((r) => r.address);
@@ -106,12 +116,25 @@ export default function HomePage() {
 
             const json = (await res.json()) as any;
             if (json?.success && json?.data) {
-              const priceMap: Record<string, number> = {};
+              const priceMap: Record<
+                string,
+                { price: number; change24h: number | null }
+              > = {};
+
               for (const [a, d] of Object.entries<any>(json.data || {})) {
-                priceMap[String(a).toLowerCase()] = Number(d?.value ?? 0);
+                priceMap[String(a).toLowerCase()] = {
+                  price: Number(d?.value ?? 0),
+                  change24h:
+                    typeof d?.priceChange24h === "number"
+                      ? Number(d.priceChange24h)
+                      : null,
+                };
               }
+
               for (const r of rows) {
-                r.priceUsd = priceMap[r.address.toLowerCase()] ?? null;
+                const p = priceMap[r.address.toLowerCase()];
+                r.priceUsd = p?.price ?? null;
+                r.priceChange24h = p?.change24h ?? null;
               }
             }
           } catch (e) {
@@ -119,16 +142,23 @@ export default function HomePage() {
           }
         }
 
+        if (!alive) return;
         setTokens(rows);
       } catch (e) {
         console.error("Token load failed", e);
+        if (!alive) return;
         setTokens([]);
       } finally {
+        if (!alive) return;
         setLoading(false);
       }
     }
 
     load();
+
+    return () => {
+      alive = false;
+    };
   }, [address, BIRDEYE_API_KEY]);
 
   async function vote(token: `0x${string}`, side: 0 | 1, feeWei: bigint) {
@@ -158,9 +188,7 @@ export default function HomePage() {
       <section className="pod-hero">
         <div className="pod-hero__frame">
           <div className="pod-hero__kicker">SEASON MODE</div>
-
           <Typewriter text="Vote on Base. Earn XP. Claim Rewards." />
-
         </div>
       </section>
 
@@ -178,51 +206,68 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="pod-grid">
-            {tokens.map((t) => (
-              <div key={t.address} className="pod-card">
-                <div className="pod-card__top">
-                  <div>
-                    <div className="pod-card__symbol">
-                      {t.symbol || t.address}
-                    </div>
-                    <div className="pod-card__name">{t.name}</div>
-                  </div>
+            {tokens.map((t) => {
+              const change = t.priceChange24h;
+              const changeClass =
+                change === null || change === undefined
+                  ? "pod-change"
+                  : change >= 0
+                  ? "pod-change pod-change--up"
+                  : "pod-change pod-change--down";
 
-                  <div className="pod-card__right">
-                    <div className="pod-price">{formatUsd(t.priceUsd)}</div>
+              return (
+                <div key={t.address} className="pod-card">
+                  <div className="pod-card__top">
+                    <div>
+                      <div className="pod-card__symbol">
+                        {t.symbol || t.address}
+                      </div>
+                      <div className="pod-card__name">{t.name}</div>
+
+                      <div className="pod-price">{formatUsd(t.priceUsd)}</div>
+                      <div className={changeClass}>
+                        {formatChange(t.priceChange24h)}
+                      </div>
+                    </div>
+
+                    {/* Logo oikeaan yläkulmaan */}
                     {t.logoURI ? (
-                      <img className="pod-logo" src={t.logoURI} alt="" />
+                      <img
+                        className="pod-logo pod-logo--corner"
+                        src={t.logoURI}
+                        alt=""
+                      />
                     ) : (
-                      <div className="pod-logo pod-logo--empty" />
+                      <div className="pod-logo pod-logo--corner pod-logo--empty" />
                     )}
                   </div>
-                </div>
 
-                <div className="pod-stats">
-                  <span>👍 {t.pump}</span>
-                  <span className="pod-sep">·</span>
-                  <span>👎 {t.dump}</span>
-                </div>
+                  <div className="pod-stats">
+                    <span>👍 {t.pump}</span>
+                    <span className="pod-sep">·</span>
+                    <span>👎 {t.dump}</span>
+                  </div>
 
-                <div className="pod-actions-row">
-                  <button
-                    disabled={!isConnected && !isMiniApp()}
-                    onClick={() => vote(t.address, 0, t.feeWei)}
-                    className="pod-vote pod-vote--pump"
-                  >
-                    PUMP
-                  </button>
+                  <div className="pod-actions-row">
+                    <button
+                      disabled={!isConnected && !isMiniApp()}
+                      onClick={() => vote(t.address, 0, t.feeWei)}
+                      className="pod-vote pod-vote--pump"
+                    >
+                      PUMP
+                    </button>
 
-                  <button
-                    disabled={!isConnected && !isMiniApp()}
-                    onClick={() => vote(t.address, 1, t.feeWei)}
-                    className="pod-vote pod-vote--dump"
-                  >
-                    DUMP
-                  </button>
+                    <button
+                      disabled={!isConnected && !isMiniApp()}
+                      onClick={() => vote(t.address, 1, t.feeWei)}
+                      className="pod-vote pod-vote--dump"
+                    >
+                      DUMP
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
