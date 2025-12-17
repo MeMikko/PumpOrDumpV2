@@ -1,1 +1,37 @@
-public
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE1MjI1NjMsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhGQjE3MjVGOGYxMDk3NTM0Y2NjOTRDYWE3OUJlYTVhZDIzOGJEQWVmIn0",
+    "payload": "eyJkb21haW4iOiJwdW1wb3JkdW1wLWFwcC52ZXJjZWwuYXBwIn0",
+    "signature": "ddKVb5KMUyZIdBg9qOr34UIvyvjtowb8z2XEg85f8TErlrYj58BTPVVhdOLVbGQ7qGskCyZaUSCvx63p+iXSgxs="
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Pump or Dump",
+    "homeUrl": "https://pumpordump-app.vercel.app/",
+    "iconUrl": "https://pumpordump-app.vercel.app/icon.png",
+    "splashImageUrl": "https://pumpordump-app.vercel.app/icon.png",
+    "splashBackgroundColor": "#050617",
+    "subtitle": "Predict crypto trends",
+    "description": "Predict pump or dump movements on trending tokens. Earn points from correct predictions and climb the leaderboard.",
+    "tagline": "Predict. Earn. Dominate.",
+    "primaryCategory": "finance",
+    "tags": ["crypto", "tokens", "predict", "pump", "dump"],
+    "screenshotUrls": [
+      "https://pumpordump-app.vercel.app/screenshots/s1.png",
+      "https://pumpordump-app.vercel.app/screenshots/s2.png",
+      "https://pumpordump-app.vercel.app/screenshots/s3.png"
+    ],
+    "heroImageUrl": "https://pumpordump-app.vercel.app/hero.png",
+    "requiredChains": ["eip155:8453"],
+    "requiredCapabilities": [
+      "actions.signIn",
+      "actions.swapToken",
+      "wallet.getEthereumProvider"
+    ],
+    "webhookUrl": "https://pumpordump-app.vercel.app/api/base-webhook",
+    "ogTitle": "Pump or Dump",
+    "ogDescription": "Predict crypto trends and earn rewards.",
+    "ogImageUrl": "https://pumpordump-app.vercel.app/og.png",
+    "noindex": false
+  }
+}
