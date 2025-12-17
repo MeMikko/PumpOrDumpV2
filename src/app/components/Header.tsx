@@ -1,31 +1,36 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useAccount, useEnsName } from "wagmi";
-import { base } from "wagmi/chains";
 
 function shorten(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
-function getFarcasterUsername() {
-  if (typeof window === "undefined") return null;
-  const fc = (window as any).fc;
-  return fc?.user?.username ?? null;
-}
-
 export default function Header() {
   const { address, isConnected } = useAccount();
 
+  /* 🔹 ENS → AINA MAINNET */
   const { data: ensName } = useEnsName({
     address,
-    chainId: base.id,
+    chainId: 1, // 🔥 ETH MAINNET
     query: {
       enabled: Boolean(address),
     },
   });
 
-  const farcasterName = getFarcasterUsername();
+  /* 🔹 Farcaster MiniApp */
+  const [farcasterName, setFarcasterName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const fc = (window as any).fc;
+    if (fc?.user?.username) {
+      setFarcasterName(fc.user.username);
+    }
+  }, []);
 
   let displayName: string | null = null;
 
