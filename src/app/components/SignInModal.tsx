@@ -5,13 +5,10 @@ import { useSession } from "@/lib/useSession";
 import { SignInWithBase } from "./SignInWithBase";
 
 export default function SignInModal() {
-  const { signedIn, loading } = useSession();
+  const { signedIn } = useSession();
 
   // ❗ Ei koskaan desktopissa
   if (!isBaseApp()) return null;
-
-  // ❗ Odotetaan sessionin initialisointia
-  if (loading) return null;
 
   // ❗ Jos jo kirjautunut → ei popupia
   if (signedIn) return null;
