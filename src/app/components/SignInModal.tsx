@@ -3,7 +3,7 @@
 import { useAccount } from "wagmi";
 import { useSession } from "@/lib/useSession";
 import { isBaseApp } from "@/utils/isBaseApp";
-import SignInWithBase from "./SignInWithBase";
+import { SignInWithBase } from "./SignInWithBase";
 
 export default function SignInModal() {
   const { address } = useAccount();
