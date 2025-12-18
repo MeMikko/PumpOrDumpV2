@@ -3,7 +3,6 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { useEffect, useState } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
 
@@ -35,7 +34,7 @@ export const useSession = create<SessionState>()(
         const { signMessageAsync } = useSignMessage();
 
         if (!isConnected || !address) {
-          set({ error: "No wallet connected" });
+          set({ error: "Wallet not connected" });
           return;
         }
 
@@ -47,7 +46,7 @@ export const useSession = create<SessionState>()(
           const message = new SiweMessage({
             domain: window.location.host,
             address,
-            statement: "Sign in to Pump or Dump with Base",
+            statement: "Sign in to Pump or Dump",
             uri: window.location.origin,
             version: "1",
             chainId: 8453,
