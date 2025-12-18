@@ -7,7 +7,8 @@ import dynamicImport from "next/dynamic";
 import Providers from "./providers"; // ✅ oikea polku ja casing
 import SvgSizeNormalizer from "./components/SvgSizeNormalizer";
 import AppHeader from "./components/AppHeader";
-import BaseSignInModal from "./components/BaseSignInModal";
+import SignInModal from "./components/SignInModal";
+
 
 const BottomNav = dynamicImport(() => import("./components/BottomNav"), {
   ssr: false,
@@ -88,16 +89,18 @@ export default function RootLayout({
   <MiniAppInit />
   <SvgSizeNormalizer />
 
-  {/* 🔐 Global Base Account sign-in */}
-  <BaseSignInModal />
-
   <AppHeader />
+
+  {/* 🔑 GLOBAL BASE SIGN-IN POPUP */}
+  <SignInModal />
+
   {children}
 
   <div className="block md:hidden">
     <BottomNav />
   </div>
 </Providers>
+
       </body>
     </html>
   );
