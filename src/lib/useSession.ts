@@ -1,22 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { create } from "zustand";
 
-const KEY = "pod:signed-in";
+type SessionState = {
+  signedIn: boolean;
+  markSignedIn: () => void;
+};
 
-export function useSession() {
-  const [signedIn, setSignedIn] = useState(false);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setSignedIn(localStorage.getItem(KEY) === "1");
-    setReady(true);
-  }, []);
-
-  function markSignedIn() {
-    localStorage.setItem(KEY, "1");
-    setSignedIn(true);
-  }
-
-  return { signedIn, ready, markSignedIn };
-}
+export const useSession = create<SessionState>((set) => ({
+  signedIn: false,
+  markSignedIn: () => set({ signedIn: true }),
+}));
