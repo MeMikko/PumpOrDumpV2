@@ -107,29 +107,31 @@ export default function AppHeader() {
             </div>
           </div>
 
-          {/* Wallet connect only */}
-          <div className="pod-actions">
-            {!isConnected ? (
-              <button
-                className="pod-btn"
-                disabled={isPending}
-                onClick={() => {
-                  const injected = connectors.find(
-                    (c) => c.id === "injected"
-                  );
-                  if (injected) {
-                    connect({ connector: injected });
-                  }
-                }}
-              >
-                {isPending ? "CONNECTING…" : "CONNECT"}
-              </button>
-            ) : (
-              <button className="pod-btn" onClick={() => disconnect()}>
-                DISCONNECT
-              </button>
-            )}
-          </div>
+          {/* Wallet actions (hidden in Base App) */}
+{!isBaseApp() && (
+  <div className="pod-actions">
+    {!isConnected ? (
+      <button
+        className="pod-btn"
+        disabled={isPending}
+        onClick={() => {
+          const injected = connectors.find(
+            (c) => c.id === "injected"
+          );
+          if (injected) {
+            connect({ connector: injected });
+          }
+        }}
+      >
+        {isPending ? "CONNECTING…" : "CONNECT"}
+      </button>
+    ) : (
+      <button className="pod-btn" onClick={() => disconnect()}>
+        DISCONNECT
+      </button>
+    )}
+  </div>
+)}
         </div>
       </div>
     </header>
