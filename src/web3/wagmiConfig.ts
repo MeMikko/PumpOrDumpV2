@@ -6,14 +6,14 @@ import { base } from "wagmi/chains";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
-const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WC_ID;
+const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WC_ID as string | undefined;
 const BASE_RPC = process.env.NEXT_PUBLIC_BASE_RPC_URL ?? "https://base-mainnet.public.blastapi.io";
 
 // Dynaamiset connectorit client-side
 const getConnectors = () => {
   const connectors = [
-    farcasterMiniApp(), // Farcaster MiniApp -autoconnect
-    injected({ shimDisconnect: true }), // Injected (Base Wallet, MetaMask jne.)
+    farcasterMiniApp(),
+    injected({ shimDisconnect: true }),
     coinbaseWallet({ appName: "Pump or Dump" }),
   ];
 
