@@ -3,82 +3,32 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { useAccount, useSignMessage } from "wagmi";
-import { SiweMessage } from "siwe";
 
 type SessionState = {
   signedIn: boolean;
   address: string | null;
-  ready: boolean;
   loading: boolean;
   error: string | null;
 
-  markReady: () => void;
-  signIn: () => Promise<void>;
-  signOut: () => void;
+  setSignedIn: (value: boolean) => void;
+  setAddress: (value: string | null) => void;
+  setLoading: (value: boolean) => void;
+  setError: (value: string | null) => void;
 };
 
 export const useSession = create<SessionState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       signedIn: false,
       address: null,
-      ready: false,
       loading: false,
       error: null,
 
-      markReady: () => set({ ready: true }),
-
-      signIn: async () => {
-        const { address, isConnected } = useAccount();
-        const { signMessageAsync } = useSignMessage();
-
-        if (!isConnected || !address) {
-          set({ error: "Wallet not connected" });
-          return;
-        }
-
-        set({ loading: true, error: null });
-
-        try {
-          const nonce = crypto.randomUUID().replace(/-/g, "");
-
-          const message = new SiweMessage({
-            domain: window.location.host,
-            address,
-            statement: "Sign in to Pump or Dump",
-            uri: window.location.origin,
-            version: "1",
-            chainId: 8453,
-            nonce,
-          });
-
-          const preparedMessage = message.prepareMessage();
-          const signature = await signMessageAsync({ message: preparedMessage });
-
-          set({
-            signedIn: true,
-            address,
-            error: null,
-          });
-        } catch (err: any) {
-          set({ error: err.message || "Sign-in failed" });
-        } finally {
-          set({ loading: false });
-        }
-      },
-
-      signOut: () => {
-        set({
-          signedIn: false,
-          address: null,
-          error: null,
-        });
-      },
+      setSignedIn: (value) => set({ signedIn: value }),
+      setAddress: (value) => set({ address: value }),
+      setLoading: (value) => set({ loading: value }),
+      setError: (value) => set({ error: value }),
     }),
-    {
-      name: "pump-or-dump-session",
-      partialize: (state) => ({ signedIn: state.signedIn, address: state.address }),
-    }
+    { name: "pump-or-dump-session" }
   )
 );
