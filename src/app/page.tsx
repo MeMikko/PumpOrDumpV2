@@ -68,10 +68,15 @@ export default function HomePage() {
       setLoading(true);
 
       try {
-        const addresses = await getActiveTokens();
+        // 1️⃣ HAE AINA KOKO TOKEN-LISTA
+        const addresses = (await getActiveTokens()) as `0x${string}`[];
+
+        // 2️⃣ HAE BIRDEYE AINA TÄLLÄ LISTALLA (KORJAUS)
+        const birdeyeMap = await fetchBirdeyePrices(addresses);
+
         const rows: TokenRow[] = [];
 
-        for (const token of addresses as `0x${string}`[]) {
+        for (const token of addresses) {
           const cfg = await getTokenConfigSafe(token);
           if (!cfg.enabled) continue;
 
@@ -87,6 +92,8 @@ export default function HomePage() {
             if (ts > 0n) lastVoteAt = Number(ts) * 1000;
           }
 
+          const d = birdeyeMap[token.toLowerCase()];
+
           rows.push({
             address: token,
             name: meta.name,
@@ -96,24 +103,13 @@ export default function HomePage() {
             dump: Number(stats.dump),
             feeWei: cfg.feeWei ?? 0n,
             lastVoteAt,
-            priceUsd: null,
-            priceChange24h: null,
+            priceUsd:
+              typeof d?.value === "number" ? d.value : null,
+            priceChange24h:
+              typeof d?.priceChange24h === "number"
+                ? d.priceChange24h
+                : null,
           });
-        }
-
-        // 🔹 Birdeye (käytetään sinun olemassa olevaa funktiota)
-        const priceMap = await fetchBirdeyePrices(
-          rows.map((r) => r.address)
-        );
-
-        for (const r of rows) {
-          const d = priceMap[r.address.toLowerCase()];
-          r.priceUsd =
-            typeof d?.value === "number" ? d.value : null;
-          r.priceChange24h =
-            typeof d?.priceChange24h === "number"
-              ? d.priceChange24h
-              : null;
         }
 
         if (alive) setTokens(rows);
@@ -131,7 +127,7 @@ export default function HomePage() {
     };
   }, [address]);
 
-  /* ───────── Vote (sponsored-ready) ───────── */
+  /* ───────── Vote (Base sponsored ready) ───────── */
 
   async function vote(
     token: `0x${string}`,
@@ -167,6 +163,7 @@ export default function HomePage() {
     <div className="pod-page">
       <Onboarding />
 
+      {/* HERO */}
       <section className="pod-hero">
         <div className="pod-hero__frame">
           <div className="pod-hero__kicker">SEASON MODE</div>
@@ -174,6 +171,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* TOKEN LIST */}
       <section className="pod-content">
         {loading ? (
           <div className="pod-grid">
@@ -204,8 +202,12 @@ export default function HomePage() {
                 <div key={t.address} className="pod-card">
                   <div className="pod-card__top">
                     <div>
-                      <div className="pod-card__symbol">{t.symbol}</div>
-                      <div className="pod-card__name">{t.name}</div>
+                      <div className="pod-card__symbol">
+                        {t.symbol}
+                      </div>
+                      <div className="pod-card__name">
+                        {t.name}
+                      </div>
                       <div className="pod-price">
                         {formatUsd(t.priceUsd)}
                       </div>
@@ -239,7 +241,9 @@ export default function HomePage() {
                         vote(t.address, 0, t.feeWei)
                       }
                     >
-                      {voting === t.address ? "VOTING…" : "PUMP"}
+                      {voting === t.address
+                        ? "VOTING…"
+                        : "PUMP"}
                     </button>
 
                     <button
@@ -249,7 +253,9 @@ export default function HomePage() {
                         vote(t.address, 1, t.feeWei)
                       }
                     >
-                      {voting === t.address ? "VOTING…" : "DUMP"}
+                      {voting === t.address
+                        ? "VOTING…"
+                        : "DUMP"}
                     </button>
                   </div>
                 </div>
