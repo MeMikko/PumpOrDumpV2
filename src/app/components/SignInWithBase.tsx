@@ -1,13 +1,11 @@
 // src/app/components/SignInWithBase.tsx
 "use client";
 
-import { SignInWithBaseButton } from "@base-org/account-ui/react";
 import { useSession } from "@/lib/useSession";
 
 export function SignInWithBase() {
   const { signedIn, address, loading, error, signIn } = useSession();
 
-  // Jos jo kirjautunut → näytä connected-tila
   if (signedIn && address) {
     return (
       <div className="text-green-400 text-center text-sm">
@@ -16,11 +14,13 @@ export function SignInWithBase() {
     );
   }
 
-  const handleSignIn = async () => {
+  const handleClick = async () => {
+    console.log("Nappi klikattu – kutsutaan signIn()");
     try {
       await signIn();
+      console.log("signIn() onnistui");
     } catch (err) {
-      console.error("Sign-in failed:", err);
+      console.error("signIn() epäonnistui:", err);
     }
   };
 
@@ -28,12 +28,20 @@ export function SignInWithBase() {
     <div className="flex flex-col items-center gap-3">
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
-      <SignInWithBaseButton
-        colorScheme="dark"
-        onClick={handleSignIn}
-      />
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        className={`
+          bg-blue-600 hover:bg-blue-700 
+          px-8 py-4 rounded-xl text-white font-semibold text-lg 
+          disabled:opacity-50 disabled:cursor-not-allowed 
+          transition-all shadow-lg
+        `}
+      >
+        {loading ? "Signing..." : "Sign with Base"}
+      </button>
 
-      {loading && <p className="text-blue-400 text-sm mt-2">Signing...</p>}
+      {loading && <p className="text-blue-400 text-sm mt-2">Waiting for signature...</p>}
     </div>
   );
 }
