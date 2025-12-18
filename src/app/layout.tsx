@@ -7,6 +7,7 @@ import dynamicImport from "next/dynamic";
 import Providers from "./providers"; // ✅ oikea polku ja casing
 import SvgSizeNormalizer from "./components/SvgSizeNormalizer";
 import AppHeader from "./components/AppHeader";
+import SignInModal from "./components/SignInModal"; // ✅ LISÄTTY
 
 const BottomNav = dynamicImport(() => import("./components/BottomNav"), {
   ssr: false,
@@ -86,6 +87,9 @@ export default function RootLayout({
         <Providers>
           <MiniAppInit />
           <SvgSizeNormalizer />
+
+          {/* 🔑 GLOBAL SIGN-IN POPUP (LISÄTTY, EI MUUTA MUUTA) */}
+          <SignInModal />
 
           {/* ✅ Global Header (no tagline here) */}
           <AppHeader />
