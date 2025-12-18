@@ -3,7 +3,12 @@
 import * as React from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
-import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
+import {
+  injected,
+  walletConnect,
+  coinbaseWallet,
+  baseAccount,
+} from "wagmi/connectors";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -23,13 +28,23 @@ export const wagmiConfig = createConfig({
     [base.id]: http(BASE_RPC),
   },
   connectors: [
-    // 🟣 Farcaster MiniApp
+    /**
+     * 🔑 Base App / Mini App
+     * – auto-connect Base Account
+     * – enables paymaster, gasless, batching
+     */
     farcasterMiniApp(),
 
-    // 🦊 Desktop MetaMask & muut injected walletit
+    baseAccount({
+      appName: "Pump or Dump",
+      appLogoUrl: "https://pumpordump-app.vercel.app/icon.png",
+    }),
+
+    /**
+     * 🖥 Desktop / Admin paneeli
+     */
     injected(),
 
-    // 🔗 WalletConnect (mobile)
     ...(WC_PROJECT_ID
       ? [
           walletConnect({
@@ -45,13 +60,11 @@ export const wagmiConfig = createConfig({
         ]
       : []),
 
-    // 🔵 Coinbase Wallet
     coinbaseWallet({
       appName: "Pump or Dump",
     }),
   ],
 });
-
 
 /* ───────────────── React Query ───────────────── */
 
@@ -71,24 +84,11 @@ export default function Providers({
 }: {
   children: React.ReactNode;
 }) {
-  const authConfig = {
-    domain:
-      typeof window !== "undefined"
-        ? window.location.host
-        : "pumpordump-app.vercel.app",
-    siweUri:
-      typeof window !== "undefined"
-        ? window.location.href
-        : "https://pumpordump-app.vercel.app",
-    relay: "https://relay.farcaster.xyz",
-    rpcUrl: BASE_RPC,
-  };
-  
-    return (
-  <WagmiProvider config={wagmiConfig}>
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  </WagmiProvider>
-);
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
 }
