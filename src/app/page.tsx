@@ -17,6 +17,8 @@ import {
   contract,
 } from "@/web3/contract";
 
+/* ───────────────── Types ───────────────── */
+
 type TokenRow = {
   address: `0x${string}`;
   name: string;
@@ -30,8 +32,10 @@ type TokenRow = {
   priceChange24h?: number | null;
 };
 
-function isMiniApp() {
-  return typeof window !== "undefined" && (window as any).fc;
+/* ───────────────── Utils ───────────────── */
+
+function isBaseApp() {
+  return typeof window !== "undefined" && Boolean((window as any).ethereum?.isBase);
 }
 
 function formatUsd(n?: number | null) {
@@ -46,17 +50,62 @@ function formatChange(n?: number | null) {
   return `${sign}${n.toFixed(2)}%`;
 }
 
+function playerName(address?: string) {
+  if (!address) return "Player";
+  return `Player ${parseInt(address.slice(2, 6), 16)}`;
+}
+
+/* ───────────────── Onboarding ───────────────── */
+
+function Onboarding() {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!localStorage.getItem("onboarded")) {
+      setOpen(true);
+    }
+  }, []);
+
+  if (!open) return null;
+
+  return (
+    <div className="pod-onboard">
+      <div className="pod-onboard__card">
+        <h2>Welcome to Pump or Dump</h2>
+        <ul>
+          <li>Vote on trending tokens</li>
+          <li>Earn XP from correct predictions</li>
+          <li>Climb the leaderboard</li>
+        </ul>
+        <button
+          onClick={() => {
+            localStorage.setItem("onboarded", "1");
+            setOpen(false);
+          }}
+        >
+          Start voting
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────── Page ───────────────── */
+
 export default function HomePage() {
   const { address, isConnected } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [voting, setVoting] = useState<string | null>(null);
 
   const BIRDEYE_API_KEY =
     process.env.NEXT_PUBLIC_BIRDEYE_API_KEY ||
     process.env.NEXT_PUBLIC_BIRDEYE_KEY ||
     "";
+
+  /* ───────── Load tokens ───────── */
 
   useEffect(() => {
     let alive = true;
@@ -77,10 +126,7 @@ export default function HomePage() {
 
           let lastVoteAt: number | null = null;
           if (address) {
-            const ts = await getLastVoteTimeSafe(
-              address as `0x${string}`,
-              token
-            );
+            const ts = await getLastVoteTimeSafe(address as Address, token);
             if (ts > 0n) lastVoteAt = Number(ts) * 1000;
           }
 
@@ -98,92 +144,74 @@ export default function HomePage() {
           });
         }
 
-        // Birdeye prices (+ 24h change)
+        // Birdeye prices
         if (BIRDEYE_API_KEY && rows.length) {
-          try {
-            const addresses = rows.map((r) => r.address);
-            const res = await fetch(
-              `https://public-api.birdeye.so/defi/multi_price?list_address=${addresses
-                .map((a) => a.toLowerCase())
-                .join(",")}`,
-              {
-                headers: {
-                  "X-API-KEY": BIRDEYE_API_KEY,
-                  "x-chain": "base",
-                },
-              }
-            );
-
-            const json = (await res.json()) as any;
-            if (json?.success && json?.data) {
-              const priceMap: Record<
-                string,
-                { price: number; change24h: number | null }
-              > = {};
-
-              for (const [a, d] of Object.entries<any>(json.data || {})) {
-                priceMap[String(a).toLowerCase()] = {
-                  price: Number(d?.value ?? 0),
-                  change24h:
-                    typeof d?.priceChange24h === "number"
-                      ? Number(d.priceChange24h)
-                      : null,
-                };
-              }
-
-              for (const r of rows) {
-                const p = priceMap[r.address.toLowerCase()];
-                r.priceUsd = p?.price ?? null;
-                r.priceChange24h = p?.change24h ?? null;
-              }
+          const res = await fetch(
+            `https://public-api.birdeye.so/defi/multi_price?list_address=${rows
+              .map((r) => r.address.toLowerCase())
+              .join(",")}`,
+            {
+              headers: {
+                "X-API-KEY": BIRDEYE_API_KEY,
+                "x-chain": "base",
+              },
             }
-          } catch (e) {
-            console.error("Birdeye failed", e);
+          );
+
+          const json = await res.json();
+          if (json?.success && json?.data) {
+            for (const r of rows) {
+              const d = json.data[r.address.toLowerCase()];
+              r.priceUsd = d?.value ?? null;
+              r.priceChange24h =
+                typeof d?.priceChange24h === "number"
+                  ? d.priceChange24h
+                  : null;
+            }
           }
         }
 
         if (!alive) return;
         setTokens(rows);
-      } catch (e) {
-        console.error("Token load failed", e);
-        if (!alive) return;
-        setTokens([]);
       } finally {
-        if (!alive) return;
-        setLoading(false);
+        if (alive) setLoading(false);
       }
     }
 
     load();
-
     return () => {
       alive = false;
     };
   }, [address, BIRDEYE_API_KEY]);
 
-  async function vote(token: `0x${string}`, side: 0 | 1, feeWei: bigint) {
-    // MiniApp → viem
-    if (isMiniApp()) {
-      if (!address) throw new Error("No MiniApp account available");
-      await contract.write.vote([token, side], {
-        account: address as `0x${string}`,
-        value: feeWei,
-      });
-      return;
-    }
+  /* ───────── Vote ───────── */
 
-    // Desktop → wagmi
-    await writeContractAsync({
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      functionName: "vote",
-      args: [token, side],
-      value: feeWei,
-    });
+  async function vote(token: `0x${string}`, side: 0 | 1, feeWei: bigint) {
+    setVoting(token);
+    try {
+      if (isBaseApp()) {
+        await contract.write.vote([token, side], {
+          account: address as Address,
+          value: feeWei,
+        });
+      } else {
+        await writeContractAsync({
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: "vote",
+          args: [token, side],
+          value: feeWei,
+        });
+      }
+    } finally {
+      setVoting(null);
+    }
   }
 
   return (
     <div className="pod-page">
+      <Onboarding />
+
       {/* HERO */}
       <section className="pod-hero">
         <div className="pod-hero__frame">
@@ -207,11 +235,10 @@ export default function HomePage() {
         ) : (
           <div className="pod-grid">
             {tokens.map((t) => {
-              const change = t.priceChange24h;
               const changeClass =
-                change === null || change === undefined
+                t.priceChange24h === null
                   ? "pod-change"
-                  : change >= 0
+                  : t.priceChange24h >= 0
                   ? "pod-change pod-change--up"
                   : "pod-change pod-change--down";
 
@@ -219,18 +246,14 @@ export default function HomePage() {
                 <div key={t.address} className="pod-card">
                   <div className="pod-card__top">
                     <div>
-                      <div className="pod-card__symbol">
-                        {t.symbol || t.address}
-                      </div>
+                      <div className="pod-card__symbol">{t.symbol}</div>
                       <div className="pod-card__name">{t.name}</div>
-
                       <div className="pod-price">{formatUsd(t.priceUsd)}</div>
                       <div className={changeClass}>
                         {formatChange(t.priceChange24h)}
                       </div>
                     </div>
 
-                    {/* Logo oikeaan yläkulmaan */}
                     {t.logoURI ? (
                       <img
                         className="pod-logo pod-logo--corner"
@@ -250,19 +273,19 @@ export default function HomePage() {
 
                   <div className="pod-actions-row">
                     <button
-                      disabled={!isConnected && !isMiniApp()}
-                      onClick={() => vote(t.address, 0, t.feeWei)}
                       className="pod-vote pod-vote--pump"
+                      disabled={!address || voting === t.address}
+                      onClick={() => vote(t.address, 0, t.feeWei)}
                     >
-                      PUMP
+                      {voting === t.address ? "VOTING…" : "PUMP"}
                     </button>
 
                     <button
-                      disabled={!isConnected && !isMiniApp()}
-                      onClick={() => vote(t.address, 1, t.feeWei)}
                       className="pod-vote pod-vote--dump"
+                      disabled={!address || voting === t.address}
+                      onClick={() => vote(t.address, 1, t.feeWei)}
                     >
-                      DUMP
+                      {voting === t.address ? "VOTING…" : "DUMP"}
                     </button>
                   </div>
                 </div>
