@@ -18,55 +18,39 @@ type WalletConnectResult = {
 
 const sdk = createBaseAccountSDK({
   appName: "Pump or Dump",
+  appLogoUrl: "https://pumpordump-app.vercel.app/icon.png", // hyvä lisätä
 });
 
 export function SignInWithBase() {
-  const { markSignedIn } = useSession();
+  const { address, signedIn, loading, error, signIn } = useSession();
 
-  const signInWithBase = async () => {
-    const provider = sdk.getProvider();
+  // Jos jo kirjautunut → näytä connected-tila
+  if (signedIn && address) {
+    return (
+      <div className="text-green-400 text-center text-sm">
+        Connected: {address.slice(0, 6)}...{address.slice(-4)}
+      </div>
+    );
+  }
 
-    const nonce = crypto.randomUUID().replace(/-/g, "");
-
-    // Ensure Base chain
-    await provider.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: "0x2105" }], // Base mainnet
-    });
-
-    const result = (await provider.request({
-      method: "wallet_connect",
-      params: [
-        {
-          version: "1",
-          capabilities: {
-            signInWithEthereum: {
-              nonce,
-              chainId: "0x2105",
-            },
-          },
-        },
-      ],
-    })) as WalletConnectResult;
-
-    const account = result.accounts[0];
-    const { address } = account;
-    const { message, signature } =
-      account.capabilities.signInWithEthereum;
-
-    await fetch("/api/auth/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address, message, signature }),
-    });
-
-    markSignedIn();
+  const handleSignIn = async () => {
+    try {
+      await signIn(); // Käyttää uutta hookin signIn-funktiota
+    } catch (err) {
+      console.error("Sign-in failed:", err);
+    }
   };
 
   return (
-    <SignInWithBaseButton
-      colorScheme="dark"
-      onClick={signInWithBase}
-    />
+    <div className="flex flex-col items-center gap-3">
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+      <SignInWithBaseButton
+        colorScheme="dark"
+        onClick={handleSignIn}
+        disabled={loading}
+        size="lg"
+      />
+      {loading && <p className="text-blue-400 text-sm mt-2">Signing...</p>}
+    </div>
   );
 }
