@@ -1,7 +1,10 @@
 // src/web3/wagmiConfig.ts
+"use client"; // Tärkeää: tämä tiedosto on client-side only
+
 import { createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
+import { baseAccount } from "@base-org/account"; // ← Tämä puuttui!
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
 const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WC_ID;
@@ -9,25 +12,26 @@ const BASE_RPC =
   process.env.NEXT_PUBLIC_BASE_RPC_URL ??
   "https://base-mainnet.public.blastapi.io";
 
-export const wagmiConfig = createConfig({
-  ssr: false,
+// Käytä dynaamista connector-valintaa client-side (window on olemassa)
+const getConnectors = () => {
+  if (typeof window === "undefined") return [];
 
-  chains: [base],
-  transports: {
-    [base.id]: http(BASE_RPC),
-  },
-
-  connectors: [
-    /* 🟣 Farcaster MiniApp */
+  return [
+    // Farcaster MiniApp (pakollinen Farcaster-embedille)
     farcasterMiniApp(),
 
-    /* 🦊 MetaMask */
+    // Base Account (pakollinen automaattiselle Base Smart Wallet -connectille)
+    baseAccount({
+      appName: "Pump or Dump",
+      appLogoUrl: "https://pumpordump-app.vercel.app/icon.png",
+    }),
+
+    // Desktop / muut ympäristöt
     injected({
       target: "metaMask",
       shimDisconnect: true,
     }),
 
-    /* 🔗 WalletConnect */
     ...(WC_PROJECT_ID
       ? [
           walletConnect({
@@ -42,9 +46,17 @@ export const wagmiConfig = createConfig({
         ]
       : []),
 
-    /* 🧿 Coinbase Wallet */
     coinbaseWallet({
       appName: "Pump or Dump",
     }),
-  ],
+  ];
+};
+
+export const wagmiConfig = createConfig({
+  ssr: false,
+  chains: [base],
+  transports: {
+    [base.id]: http(BASE_RPC),
+  },
+  connectors: getConnectors(), // kutsutaan client-side
 });
