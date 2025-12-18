@@ -2,9 +2,9 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware"; // tallentaa localStorageen
-import { useEffect } from "react";
-import { useAccount } from "wagmi";
+import { persist } from "zustand/middleware";
+import { useEffect, useState } from "react";
+import { useAccount, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
 
 type SessionState = {
@@ -31,8 +31,10 @@ export const useSession = create<SessionState>()(
       markReady: () => set({ ready: true }),
 
       signIn: async () => {
-        const { address } = useAccount(); // wagmi:n account
-        if (!address) {
+        const { address, isConnected } = useAccount();
+        const { signMessageAsync } = useSignMessage();
+
+        if (!isConnected || !address) {
           set({ error: "No wallet connected" });
           return;
         }
@@ -40,35 +42,26 @@ export const useSession = create<SessionState>()(
         set({ loading: true, error: null });
 
         try {
-          // Generoi nonce (voit hakea myös backendistä)
           const nonce = crypto.randomUUID().replace(/-/g, "");
 
-          // Luo SIWE-viesti
           const message = new SiweMessage({
             domain: window.location.host,
             address,
             statement: "Sign in to Pump or Dump with Base",
             uri: window.location.origin,
             version: "1",
-            chainId: 8453, // Base Mainnet
+            chainId: 8453,
             nonce,
           });
 
           const preparedMessage = message.prepareMessage();
-
-          // Kutsu wagmi:n signMessage (tai Base SDK jos käytät sitä)
-          const { signMessageAsync } = useAccount(); // wagmi:n signMessage
           const signature = await signMessageAsync({ message: preparedMessage });
 
-          // Tallenna session
           set({
             signedIn: true,
             address,
             error: null,
           });
-
-          // Voit lähettää signature + message backendille varmistukseen
-          // await fetch('/api/auth/verify', { method: 'POST', body: JSON.stringify({ message: preparedMessage, signature }) });
         } catch (err: any) {
           set({ error: err.message || "Sign-in failed" });
         } finally {
@@ -85,7 +78,7 @@ export const useSession = create<SessionState>()(
       },
     }),
     {
-      name: "pump-or-dump-session", // tallentaa localStorageen
+      name: "pump-or-dump-session",
       partialize: (state) => ({ signedIn: state.signedIn, address: state.address }),
     }
   )
