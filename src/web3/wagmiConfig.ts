@@ -1,10 +1,9 @@
 // src/web3/wagmiConfig.ts
-"use client"; // Tärkeää: tämä tiedosto on client-side only
+"use client"; // Client-side only
 
 import { createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
-import { baseAccount } from "@base-org/account"; // ← Tämä puuttui!
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
 const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WC_ID;
@@ -12,25 +11,14 @@ const BASE_RPC =
   process.env.NEXT_PUBLIC_BASE_RPC_URL ??
   "https://base-mainnet.public.blastapi.io";
 
-// Käytä dynaamista connector-valintaa client-side (window on olemassa)
+// Dynaamiset connectorit client-side
 const getConnectors = () => {
   if (typeof window === "undefined") return [];
 
   return [
-    // Farcaster MiniApp (pakollinen Farcaster-embedille)
-    farcasterMiniApp(),
+    farcasterMiniApp(), // Farcaster MiniApp -autoconnect
 
-    // Base Account (pakollinen automaattiselle Base Smart Wallet -connectille)
-    baseAccount({
-      appName: "Pump or Dump",
-      appLogoUrl: "https://pumpordump-app.vercel.app/icon.png",
-    }),
-
-    // Desktop / muut ympäristöt
-    injected({
-      target: "metaMask",
-      shimDisconnect: true,
-    }),
+    injected({ shimDisconnect: true }), // Injected (MetaMask, Base Wallet, etc.)
 
     ...(WC_PROJECT_ID
       ? [
@@ -58,5 +46,5 @@ export const wagmiConfig = createConfig({
   transports: {
     [base.id]: http(BASE_RPC),
   },
-  connectors: getConnectors(), // kutsutaan client-side
+  connectors: getConnectors(),
 });
