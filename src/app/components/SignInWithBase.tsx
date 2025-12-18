@@ -1,85 +1,39 @@
-// src/lib/useSession.ts
+// src/app/components/SignInWithBase.tsx
 "use client";
 
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { useEffect, useState } from "react";
-import { useAccount, useSignMessage } from "wagmi";
-import { SiweMessage } from "siwe";
+import { SignInWithBaseButton } from "@base-org/account-ui/react";
+import { useSession } from "@/lib/useSession";
 
-type SessionState = {
-  signedIn: boolean;
-  address: string | null;
-  ready: boolean;
-  loading: boolean;
-  error: string | null;
+export function SignInWithBase() {
+  const { signedIn, address, loading, error, signIn } = useSession();
 
-  markReady: () => void;
-  signIn: () => Promise<void>;
-  signOut: () => void;
-};
+  // Jos jo kirjautunut → näytä connected-tila
+  if (signedIn && address) {
+    return (
+      <div className="text-green-400 text-center text-sm">
+        Connected: {address.slice(0, 6)}...{address.slice(-4)}
+      </div>
+    );
+  }
 
-export const useSession = create<SessionState>()(
-  persist(
-    (set, get) => ({
-      signedIn: false,
-      address: null,
-      ready: false,
-      loading: false,
-      error: null,
-
-      markReady: () => set({ ready: true }),
-
-      signIn: async () => {
-        const { address, isConnected } = useAccount();
-        const { signMessageAsync } = useSignMessage();
-
-        if (!isConnected || !address) {
-          set({ error: "No wallet connected" });
-          return;
-        }
-
-        set({ loading: true, error: null });
-
-        try {
-          const nonce = crypto.randomUUID().replace(/-/g, "");
-
-          const message = new SiweMessage({
-            domain: window.location.host,
-            address,
-            statement: "Sign in to Pump or Dump with Base",
-            uri: window.location.origin,
-            version: "1",
-            chainId: 8453,
-            nonce,
-          });
-
-          const preparedMessage = message.prepareMessage();
-          const signature = await signMessageAsync({ message: preparedMessage });
-
-          set({
-            signedIn: true,
-            address,
-            error: null,
-          });
-        } catch (err: any) {
-          set({ error: err.message || "Sign-in failed" });
-        } finally {
-          set({ loading: false });
-        }
-      },
-
-      signOut: () => {
-        set({
-          signedIn: false,
-          address: null,
-          error: null,
-        });
-      },
-    }),
-    {
-      name: "pump-or-dump-session",
-      partialize: (state) => ({ signedIn: state.signedIn, address: state.address }),
+  const handleSignIn = async () => {
+    try {
+      await signIn();
+    } catch (err) {
+      console.error("Sign-in failed:", err);
     }
-  )
-);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+
+      <SignInWithBaseButton
+        colorScheme="dark"
+        onClick={handleSignIn}
+      />
+
+      {loading && <p className="text-blue-400 text-sm mt-2">Signing...</p>}
+    </div>
+  );
+}
