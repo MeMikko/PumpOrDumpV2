@@ -1,25 +1,7 @@
 "use client";
 
 import { SignInWithBaseButton } from "@base-org/account-ui/react";
-import { createBaseAccountSDK } from "@base-org/account";
 import { useSession } from "@/lib/useSession";
-
-type WalletConnectResult = {
-  accounts: Array<{
-    address: string;
-    capabilities: {
-      signInWithEthereum: {
-        message: string;
-        signature: `0x${string}`;
-      };
-    };
-  }>;
-};
-
-const sdk = createBaseAccountSDK({
-  appName: "Pump or Dump",
-  appLogoUrl: "https://pumpordump-app.vercel.app/icon.png", // hyvä lisätä
-});
 
 export function SignInWithBase() {
   const { address, signedIn, loading, error, signIn } = useSession();
@@ -35,7 +17,7 @@ export function SignInWithBase() {
 
   const handleSignIn = async () => {
     try {
-      await signIn(); // Käyttää uutta hookin signIn-funktiota
+      await signIn();
     } catch (err) {
       console.error("Sign-in failed:", err);
     }
@@ -44,12 +26,13 @@ export function SignInWithBase() {
   return (
     <div className="flex flex-col items-center gap-3">
       {error && <p className="text-red-400 text-sm">{error}</p>}
+      
+      {/* Base:n valmis nappi – ilman disabled/size */}
       <SignInWithBaseButton
         colorScheme="dark"
         onClick={handleSignIn}
-        disabled={loading}
-        size="lg"
       />
+
       {loading && <p className="text-blue-400 text-sm mt-2">Signing...</p>}
     </div>
   );
