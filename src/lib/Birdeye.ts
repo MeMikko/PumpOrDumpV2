@@ -1,10 +1,3 @@
-const BIRDEYE_API_KEY = process.env.NEXT_PUBLIC_BIRDEYE_API_KEY;
-
-type BirdeyePrice = {
-  value?: number;
-  priceChange24h?: number;
-};
-
 export async function fetchBirdeyePrices(
   addresses: string[]
 ): Promise<Record<string, BirdeyePrice>> {
@@ -26,7 +19,15 @@ export async function fetchBirdeyePrices(
 
     const json = await res.json();
 
-    return json?.data ?? {};
+    const raw = json?.data ?? {};
+    const normalized: Record<string, BirdeyePrice> = {};
+
+    // 🔑 TÄMÄ ON KORJAUS
+    for (const [addr, data] of Object.entries(raw)) {
+      normalized[addr.toLowerCase()] = data as BirdeyePrice;
+    }
+
+    return normalized;
   } catch (e) {
     console.error("Birdeye fetch failed", e);
     return {};
