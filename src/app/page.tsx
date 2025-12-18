@@ -8,7 +8,7 @@ import Typewriter from "./components/Typewriter";
 import Onboarding from "./components/Onboarding";
 
 import { isBaseApp } from "@/utils/isBaseApp";
-import { applyBirdeyePrices } from "@/lib/birdeye";
+import { applyBirdeyePrices } from "@/lib/Birdeye";
 
 import {
   getActiveTokens,
