@@ -21,9 +21,9 @@ export async function POST(req: Request) {
   }
 
   // TODO:
-  // - create session / JWT
-  // - store user if new
-  // - link XP, votes, quests
+  // - create DB user if not exists
+  // - issue session / JWT
+  // - attach XP, votes, quests
 
   return NextResponse.json({ ok: true });
 }
