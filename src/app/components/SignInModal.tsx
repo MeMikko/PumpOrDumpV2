@@ -1,29 +1,29 @@
 "use client";
 
-import { useAccount } from "wagmi";
-import { useSession } from "@/lib/useSession";
 import { isBaseApp } from "@/utils/isBaseApp";
+import { useSession } from "@/lib/useSession";
 import { SignInWithBase } from "./SignInWithBase";
 
 export default function SignInModal() {
-  const { address } = useAccount();
-  const { signedIn, ready } = useSession();
+  const { signedIn, loading } = useSession();
 
-  // Ei desktopissa
+  // ❗ Ei koskaan desktopissa
   if (!isBaseApp()) return null;
 
-  // Odotetaan että wagmi/provider valmis
-  if (!ready) return null;
+  // ❗ Odotetaan sessionin initialisointia
+  if (loading) return null;
 
-  // Jos jo signed in → ei näytetä
-  if (!address || signedIn) return null;
+  // ❗ Jos jo kirjautunut → ei popupia
+  if (signedIn) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center">
-      <div className="w-full max-w-md mx-4 rounded-xl bg-[#0b0b1a] border border-cyan-500/30 p-6 text-center">
-        <h2 className="text-xl mb-2">Welcome to Pump or Dump</h2>
-        <p className="text-sm text-zinc-400 mb-6">
-          Sign in with your Base Account to start voting, earning XP, and claiming rewards.
+    <div className="signin-overlay">
+      <div className="signin-modal">
+        <h2>Welcome to Pump or Dump</h2>
+
+        <p>
+          Sign in with your Base Account to start voting,
+          earning XP and claiming rewards.
         </p>
 
         <SignInWithBase />
