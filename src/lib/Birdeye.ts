@@ -1,3 +1,10 @@
+const BIRDEYE_API_KEY = process.env.NEXT_PUBLIC_BIRDEYE_API_KEY;
+
+export type BirdeyePrice = {
+  value?: number;
+  priceChange24h?: number;
+};
+
 export async function fetchBirdeyePrices(
   addresses: string[]
 ): Promise<Record<string, BirdeyePrice>> {
@@ -22,7 +29,7 @@ export async function fetchBirdeyePrices(
     const raw = json?.data ?? {};
     const normalized: Record<string, BirdeyePrice> = {};
 
-    // 🔑 TÄMÄ ON KORJAUS
+    // 🔑 KRIITTINEN KORJAUS: normalisoi osoitteet lowercaseksi
     for (const [addr, data] of Object.entries(raw)) {
       normalized[addr.toLowerCase()] = data as BirdeyePrice;
     }
