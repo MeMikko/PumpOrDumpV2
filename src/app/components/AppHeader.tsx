@@ -14,21 +14,15 @@ function shortAddr(a?: string) {
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
 
-// ENS on optional – voidaan laajentaa myöhemmin
+// ENS: vain desktop-käyttöön myöhemmin
 async function tryResolveEns(_address: Address): Promise<string | null> {
   return null;
-}
-
-// Base Account -ystävällinen display
-function baseAccountLabel(address?: string) {
-  if (!address) return "Anonymous";
-  return `Player ${address.slice(2, 6).toUpperCase()}`;
 }
 
 /* ───────────────── Component ───────────────── */
 
 export default function AppHeader() {
-  const { address } = useAccount();
+  const { address, connector } = useAccount();
 
   const [ens, setEns] = React.useState<string | null>(null);
   const [xp, setXp] = React.useState<number>(0);
@@ -47,7 +41,7 @@ export default function AppHeader() {
         return;
       }
 
-      // XP / Level
+      // XP / Level contractilta
       try {
         const p = await getPlayerSafe(address as Address);
         if (!alive) return;
@@ -59,7 +53,7 @@ export default function AppHeader() {
         setLevel(0);
       }
 
-      // ENS (optional)
+      // ENS (vain desktop, optional)
       try {
         const name = await tryResolveEns(address as Address);
         if (!alive) return;
@@ -75,11 +69,22 @@ export default function AppHeader() {
     };
   }, [address]);
 
-  // 🔑 DISPLAY LOGIC (EI 0x ENSISIJAISESTI)
-  const displayName =
-    ens ??
-    baseAccountLabel(address) ??
-    (address ? shortAddr(address) : "Anonymous");
+  /* ───────────── Identity resolution ───────────── */
+
+  const isBaseAccount = connector?.id === "baseAccount";
+
+  const displayName = React.useMemo(() => {
+    // 1️⃣ ENS (desktop)
+    if (ens) return ens;
+
+    // 2️⃣ Base App / Base Account
+    if (isBaseAccount) return "Base Player";
+
+    // 3️⃣ Desktop fallback (admin / dev)
+    if (address) return shortAddr(address);
+
+    return "Anonymous";
+  }, [ens, isBaseAccount, address]);
 
   const avatarUrl =
     "data:image/svg+xml;utf8," +
