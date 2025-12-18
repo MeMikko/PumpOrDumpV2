@@ -1,17 +1,22 @@
 "use client";
 
-import { SignInWithBase } from "./SignInWithBase";
+import { useAccount } from "wagmi";
 import { useSession } from "@/lib/useSession";
 import { isBaseApp } from "@/utils/isBaseApp";
+import SignInWithBase from "./SignInWithBase";
 
-export default function BaseSignInModal() {
-  const { signedIn } = useSession();
+export default function SignInModal() {
+  const { address } = useAccount();
+  const { signedIn, ready } = useSession();
 
-  // ÄLÄ näytä desktopissa
+  // Ei desktopissa
   if (!isBaseApp()) return null;
 
-  // ÄLÄ näytä jos jo kirjautunut
-  if (signedIn) return null;
+  // Odotetaan että wagmi/provider valmis
+  if (!ready) return null;
+
+  // Jos jo signed in → ei näytetä
+  if (!address || signedIn) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center">
