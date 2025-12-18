@@ -361,3 +361,22 @@ body::before {
 .w-24 {
   width: 24%;
 }
+
+.signin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signin-modal {
+  background: #050617;
+  border: 2px solid #1f2937;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+}
+
