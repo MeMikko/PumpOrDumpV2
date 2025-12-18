@@ -6,7 +6,7 @@ import { useAccount, useSignMessage } from "wagmi";
 import { SiweMessage } from "siwe";
 
 export function SignInWithBase() {
-  const { signedIn, address, setSignedIn, loading, setLoading, setError } = useSession(); // Lisää setterit Zustand-storeen
+  const { signedIn, address, loading, error, setLoading, setError, setSignedIn } = useSession();
   const { isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
 
@@ -43,7 +43,6 @@ export function SignInWithBase() {
       const preparedMessage = message.prepareMessage();
       const signature = await signMessageAsync({ message: preparedMessage });
 
-      // Backend-varmistus
       const res = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,7 +51,7 @@ export function SignInWithBase() {
 
       if (!res.ok) throw new Error("Verification failed");
 
-      setSignedIn(true); // Käytä setter
+      setSignedIn(true);
       console.log("Kirjautuminen onnistui!");
     } catch (err: any) {
       setError(err.message || "Sign-in failed");
