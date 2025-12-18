@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { isBaseApp } from "@/utils/isBaseApp";
 import type { Address } from "viem";
 
 import { getPlayerSafe } from "@/web3/contract";
