@@ -11,6 +11,7 @@ import {
 } from "wagmi/connectors";
 import { farcasterMiniApp } from "@farcaster/miniapp-wagmi-connector";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { isBaseApp } from "@/utils/isBaseApp";
 
 /* ───────────────── ENV ───────────────── */
 
@@ -21,49 +22,47 @@ const BASE_RPC =
 
 /* ───────────────── Wagmi Config ───────────────── */
 
+const connectors = isBaseApp()
+  ? [
+      // 🔑 Base App / Mini App
+      farcasterMiniApp(),
+
+      baseAccount({
+        appName: "Pump or Dump",
+        appLogoUrl: "https://pumpordump-app.vercel.app/icon.png",
+      }),
+    ]
+  : [
+      // 🖥 Desktop / Admin
+      injected(),
+
+      ...(WC_PROJECT_ID
+        ? [
+            walletConnect({
+              projectId: WC_PROJECT_ID,
+              showQrModal: true,
+              metadata: {
+                name: "Pump or Dump",
+                description: "Predict → Earn → Dominate",
+                url: "https://pumpordump-app.vercel.app",
+                icons: ["https://pumpordump-app.vercel.app/icon.png"],
+              },
+            }),
+          ]
+        : []),
+
+      coinbaseWallet({
+        appName: "Pump or Dump",
+      }),
+    ];
+
 export const wagmiConfig = createConfig({
   ssr: false,
   chains: [base],
   transports: {
     [base.id]: http(BASE_RPC),
   },
-  connectors: [
-    /**
-     * 🔑 Base App / Mini App
-     * – auto-connect Base Account
-     * – enables paymaster, gasless, batching
-     */
-    farcasterMiniApp(),
-
-    baseAccount({
-      appName: "Pump or Dump",
-      appLogoUrl: "https://pumpordump-app.vercel.app/icon.png",
-    }),
-
-    /**
-     * 🖥 Desktop / Admin paneeli
-     */
-    injected(),
-
-    ...(WC_PROJECT_ID
-      ? [
-          walletConnect({
-            projectId: WC_PROJECT_ID,
-            showQrModal: true,
-            metadata: {
-              name: "Pump or Dump",
-              description: "Predict → Earn → Dominate",
-              url: "https://pumpordump-app.vercel.app",
-              icons: ["https://pumpordump-app.vercel.app/icon.png"],
-            },
-          }),
-        ]
-      : []),
-
-    coinbaseWallet({
-      appName: "Pump or Dump",
-    }),
-  ],
+  connectors,
 });
 
 /* ───────────────── React Query ───────────────── */
