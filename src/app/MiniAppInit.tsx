@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { sdk } from "@farcaster/miniapp-sdk";
+import { useSession } from "@/lib/useSession";
 
 export default function MiniAppInit() {
+  const { markReady } = useSession();
+
   useEffect(() => {
-    try {
-      sdk.actions.ready();
-    } catch {
-      // Desktopissa tämä ei ole MiniApp → täysin ok
-    }
-  }, []);
+    markReady();
+  }, [markReady]);
 
   return null;
 }
