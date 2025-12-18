@@ -8,7 +8,7 @@ import Typewriter from "./components/Typewriter";
 import Onboarding from "./components/Onboarding";
 
 import { isBaseApp } from "@/utils/isBaseApp";
-import { applyBirdeyePrices } from "@/lib/Birdeye";
+import { fetchBirdeyePrices } from "@/lib/Birdeye";
 
 import {
   getActiveTokens,
@@ -59,11 +59,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState<string | null>(null);
 
-  const BIRDEYE_API_KEY =
-    process.env.NEXT_PUBLIC_BIRDEYE_API_KEY ||
-    process.env.NEXT_PUBLIC_BIRDEYE_KEY ||
-    "";
-
   /* ───────── Load tokens ───────── */
 
   useEffect(() => {
@@ -106,31 +101,25 @@ export default function HomePage() {
           });
         }
 
-        // Birdeye (eriytetty logiikka)
-        if (BIRDEYE_API_KEY && rows.length) {
-          try {
-            const res = await fetch(
-              `https://public-api.birdeye.so/defi/multi_price?list_address=${rows
-                .map((r) => r.address.toLowerCase())
-                .join(",")}`,
-              {
-                headers: {
-                  "X-API-KEY": BIRDEYE_API_KEY,
-                  "x-chain": "base",
-                },
-              }
-            );
+        // 🔹 Birdeye (käytetään sinun olemassa olevaa funktiota)
+        const priceMap = await fetchBirdeyePrices(
+          rows.map((r) => r.address)
+        );
 
-            const json = await res.json();
-            if (json?.success && json?.data) {
-              applyBirdeyePrices(rows, json.data);
-            }
-          } catch (e) {
-            console.error("Birdeye failed", e);
-          }
+        for (const r of rows) {
+          const d = priceMap[r.address.toLowerCase()];
+          r.priceUsd =
+            typeof d?.value === "number" ? d.value : null;
+          r.priceChange24h =
+            typeof d?.priceChange24h === "number"
+              ? d.priceChange24h
+              : null;
         }
 
         if (alive) setTokens(rows);
+      } catch (e) {
+        console.error("Token load failed", e);
+        if (alive) setTokens([]);
       } finally {
         if (alive) setLoading(false);
       }
@@ -140,7 +129,7 @@ export default function HomePage() {
     return () => {
       alive = false;
     };
-  }, [address, BIRDEYE_API_KEY]);
+  }, [address]);
 
   /* ───────── Vote (sponsored-ready) ───────── */
 
@@ -178,7 +167,6 @@ export default function HomePage() {
     <div className="pod-page">
       <Onboarding />
 
-      {/* HERO */}
       <section className="pod-hero">
         <div className="pod-hero__frame">
           <div className="pod-hero__kicker">SEASON MODE</div>
@@ -186,7 +174,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* TOKENS */}
       <section className="pod-content">
         {loading ? (
           <div className="pod-grid">
