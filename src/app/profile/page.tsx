@@ -1,15 +1,13 @@
-export const dynamic = "force-dynamic";
+import ProfileCard from "@/app/components/ProfileCard";
 
 export default function ProfilePage() {
   return (
-    <main className="min-h-screen bg-black text-white p-6">
-      <h1 className="text-3xl font-black text-emerald-400 mb-4">
-        Profile
-      </h1>
+    <main className="pod-content">
+      <h1 className="pixel-text text-lg text-center mb-4">Your Profile</h1>
 
-      <p className="text-zinc-400">
-        View your stats, XP, quests, and voting history.
-      </p>
+      <div className="pod-grid">
+        <ProfileCard />
+      </div>
     </main>
   );
 }
