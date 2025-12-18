@@ -24,18 +24,16 @@ const BASE_RPC =
 
 const connectors = isBaseApp()
   ? [
-      // 🔑 Base App / Mini App
+      // Base App / Mini App
       farcasterMiniApp(),
-
       baseAccount({
         appName: "Pump or Dump",
         appLogoUrl: "https://pumpordump-app.vercel.app/icon.png",
       }),
     ]
   : [
-      // 🖥 Desktop / Admin
+      // Desktop / Admin
       injected(),
-
       ...(WC_PROJECT_ID
         ? [
             walletConnect({
@@ -50,7 +48,6 @@ const connectors = isBaseApp()
             }),
           ]
         : []),
-
       coinbaseWallet({
         appName: "Pump or Dump",
       }),
