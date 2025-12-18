@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    
     "next": "14.2.15",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -17,17 +16,22 @@
     "wagmi": "^2.12.7",
     "viem": "^2.12.2",
 
-    "@farcaster/auth-kit": "^0.8.1",
+    // Farcaster MiniApp -tuki
     "@farcaster/miniapp-sdk": "^0.2.1",
     "@farcaster/miniapp-wagmi-connector": "^1.1.0",
 
+    // Base Account (Smart Wallet) -tuki
     "@base-org/account": "^2.5.0",
     "@base-org/account-ui": "^1.0.1",
 
+    // SIWE (Sign-In with Ethereum) -kirjautuminen
+    "siwe": "^2.3.2",
+
+    // React Query
     "@tanstack/react-query": "^5.59.0",
 
+    // Styling
     "clsx": "^2.1.1",
-
     "tailwindcss": "^3.4.10",
     "postcss": "^8.4.47",
     "autoprefixer": "^10.4.20"
