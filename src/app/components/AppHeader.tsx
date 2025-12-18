@@ -2,26 +2,33 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { isBaseApp } from "@/utils/isBaseApp";
+import { useAccount } from "wagmi";
 import type { Address } from "viem";
 
 import { getPlayerSafe } from "@/web3/contract";
+
+/* ───────────────── Utils ───────────────── */
 
 function shortAddr(a?: string) {
   if (!a) return "";
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
 
-async function tryResolveEns(address: Address): Promise<string | null> {
-  // ENS on optional
+// ENS on optional – voidaan laajentaa myöhemmin
+async function tryResolveEns(_address: Address): Promise<string | null> {
   return null;
 }
 
+// Base Account -ystävällinen display
+function baseAccountLabel(address?: string) {
+  if (!address) return "Anonymous";
+  return `Player ${address.slice(2, 6).toUpperCase()}`;
+}
+
+/* ───────────────── Component ───────────────── */
+
 export default function AppHeader() {
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
-  const { connect, connectors, isPending } = useConnect();
+  const { address } = useAccount();
 
   const [ens, setEns] = React.useState<string | null>(null);
   const [xp, setXp] = React.useState<number>(0);
@@ -40,7 +47,7 @@ export default function AppHeader() {
         return;
       }
 
-      // XP / Level contractilta
+      // XP / Level
       try {
         const p = await getPlayerSafe(address as Address);
         if (!alive) return;
@@ -68,12 +75,13 @@ export default function AppHeader() {
     };
   }, [address]);
 
-  const display =
-    ens ||
-    (address ? shortAddr(address) : "Not connected");
+  // 🔑 DISPLAY LOGIC (EI 0x ENSISIJAISESTI)
+  const displayName =
+    ens ??
+    baseAccountLabel(address) ??
+    (address ? shortAddr(address) : "Anonymous");
 
   const avatarUrl =
-    // fallback avatar
     "data:image/svg+xml;utf8," +
     encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
@@ -99,39 +107,13 @@ export default function AppHeader() {
           <img className="pod-avatar" src={avatarUrl} alt="" />
 
           <div className="pod-user__meta">
-            <div className="pod-user__name">{display}</div>
+            <div className="pod-user__name">{displayName}</div>
             <div className="pod-user__sub">
               <span>XP {xp.toLocaleString()}</span>
               <span className="pod-sep">·</span>
               <span>LVL {level}</span>
             </div>
           </div>
-
-          {/* Wallet actions (hidden in Base App) */}
-{!isBaseApp() && (
-  <div className="pod-actions">
-    {!isConnected ? (
-      <button
-        className="pod-btn"
-        disabled={isPending}
-        onClick={() => {
-          const injected = connectors.find(
-            (c) => c.id === "injected"
-          );
-          if (injected) {
-            connect({ connector: injected });
-          }
-        }}
-      >
-        {isPending ? "CONNECTING…" : "CONNECT"}
-      </button>
-    ) : (
-      <button className="pod-btn" onClick={() => disconnect()}>
-        DISCONNECT
-      </button>
-    )}
-  </div>
-)}
         </div>
       </div>
     </header>
