@@ -9,6 +9,8 @@ import Providers from "./providers"; // ✅ oikea polku ja casing
 import SvgSizeNormalizer from "./components/SvgSizeNormalizer";
 import AppHeader from "./components/AppHeader";
 import SignInModal from "./components/SignInModal";
+import { SignInWithBase } from "./components/SignInWithBase";
+
 
 
 const BottomNav = dynamicImport(() => import("./components/BottomNav"), {
