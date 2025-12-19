@@ -2,33 +2,35 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+
+type User = {
+  fid: number;
+  username?: string;
+  displayName?: string;
+  avatar?: string;
+  address?: string;
+};
 
 type SessionState = {
   signedIn: boolean;
-  address: string | null;
+  user: User | null;
   loading: boolean;
   error: string | null;
 
-  setSignedIn: (value: boolean) => void;
-  setAddress: (value: string | null) => void;
-  setLoading: (value: boolean) => void;
-  setError: (value: string | null) => void;
+  setSignedIn: (v: boolean) => void;
+  setUser: (u: User) => void;
+  setLoading: (v: boolean) => void;
+  setError: (e: string | null) => void;
 };
 
-export const useSession = create<SessionState>()(
-  persist(
-    (set) => ({
-      signedIn: false,
-      address: null,
-      loading: false,
-      error: null,
+export const useSession = create<SessionState>((set) => ({
+  signedIn: false,
+  user: null,
+  loading: false,
+  error: null,
 
-      setSignedIn: (value) => set({ signedIn: value }),
-      setAddress: (value) => set({ address: value }),
-      setLoading: (value) => set({ loading: value }),
-      setError: (value) => set({ error: value }),
-    }),
-    { name: "pump-or-dump-session" }
-  )
-);
+  setSignedIn: (v) => set({ signedIn: v }),
+  setUser: (u) => set({ user: u }),
+  setLoading: (v) => set({ loading: v }),
+  setError: (e) => set({ error: e }),
+}));
