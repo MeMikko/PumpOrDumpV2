@@ -2,43 +2,44 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAccount } from "wagmi";
-import { createBaseAccountSDK } from "@base-org/account";
-
-const sdk = createBaseAccountSDK({
-  appName: "Pump or Dump",
-  appLogoUrl: "https://pumpordump-app.vercel.app/icon.png",
-});
+import { sdk } from "@farcaster/miniapp-sdk";
+import { useSession } from "@/lib/useSession";
 
 export default function MiniAppInit() {
-  const { address, isConnected } = useAccount();
+  const { setSignedIn, setUser } = useSession();
 
   useEffect(() => {
-    if (!isConnected) return;
+    // Kerrotaan Base Appille että ollaan valmiita
+    sdk.actions.ready();
 
-    const provider = sdk.getProvider();
+    // Kuunnellaan signin-eventti
+    sdk.on("signIn", (payload) => {
+      /*
+        payload sisältää mm:
+        {
+          fid,
+          username,
+          displayName,
+          pfpUrl,
+          custodyAddress
+        }
+      */
 
-    const initWallet = async () => {
-      try {
-        // Pakota switch Base-ketjulle
-        await provider.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: "0x2105" }],
-        });
+      setUser({
+        fid: payload.fid,
+        username: payload.username,
+        displayName: payload.displayName,
+        avatar: payload.pfpUrl,
+        address: payload.custodyAddress,
+      });
 
-        // Hae accounts (varmistus)
-        const accounts = await provider.request({ method: "eth_requestAccounts" });
-        console.log("Wallet connected, accounts:", accounts);
+      setSignedIn(true);
+    });
 
-        // Jos haluat tallentaa address sessioniin
-        // useSession().setAddress(accounts[0]);
-      } catch (err) {
-        console.error("Wallet init error:", err);
-      }
+    return () => {
+      sdk.removeAllListeners();
     };
-
-    initWallet();
-  }, [isConnected]);
+  }, [setSignedIn, setUser]);
 
   return null;
 }
