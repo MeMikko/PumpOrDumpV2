@@ -4,6 +4,7 @@ export const revalidate = 0;
 import "./globals.css";
 import dynamicImport from "next/dynamic";
 
+import "@/lib/miniappSdk";
 import Providers from "./providers"; // ✅ oikea polku ja casing
 import SvgSizeNormalizer from "./components/SvgSizeNormalizer";
 import AppHeader from "./components/AppHeader";
