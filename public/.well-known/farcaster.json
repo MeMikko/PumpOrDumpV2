@@ -1,37 +1,36 @@
 {
-  "accountAssociation": {
-    "header": "eyJmaWQiOjE1MjI1NjMsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhGQjE3MjVGOGYxMDk3NTM0Y2NjOTRDYWE3OUJlYTVhZDIzOGJEQWVmIn0",
-    "payload": "eyJkb21haW4iOiJwdW1wb3JkdW1wLWFwcC52ZXJjZWwuYXBwIn0",
-    "signature": "ddKVb5KMUyZIdBg9qOr34UIvyvjtowb8z2XEg85f8TErlrYj58BTPVVhdOLVbGQ7qGskCyZaUSCvx63p+iXSgxs="
-  },
-  "miniapp": {
+  "frame": {
+    "name": "Am i Based",
     "version": "1",
-    "name": "Pump or Dump",
-    "homeUrl": "https://pumpordump-app.vercel.app/",
-    "iconUrl": "https://pumpordump-app.vercel.app/icon.png",
-    "splashImageUrl": "https://pumpordump-app.vercel.app/icon.png",
-    "splashBackgroundColor": "#050617",
-    "subtitle": "Predict crypto trends",
-    "description": "Predict pump or dump movements on trending tokens. Earn points from correct predictions and climb the leaderboard.",
-    "tagline": "Predict. Earn. Dominate.",
-    "primaryCategory": "finance",
-    "tags": ["crypto", "tokens", "predict", "pump", "dump"],
+    "iconUrl": "https://am-i-based.vercel.app/icon.png",
+    "homeUrl": "https://am-i-based.vercel.app",
+    "imageUrl": "https://am-i-based.vercel.app/image.png",
+    "buttonTitle": "Check your aura",
+    "splashImageUrl": "https://am-i-based.vercel.app/splash.png",
+    "splashBackgroundColor": "#0b0b0b",
+    "webhookUrl": "https://am-i-based.vercel.app/api/webhook",
+    "subtitle": "Check your onchain aura",
+    "description": "Analyze your wallet on Base and discover how based you really are. Pay once, get your score, and flex the result.",
     "screenshotUrls": [
-      "https://pumpordump-app.vercel.app/screenshots/s1.png",
-      "https://pumpordump-app.vercel.app/screenshots/s2.png",
-      "https://pumpordump-app.vercel.app/screenshots/s3.png"
+      "https://am-i-based.vercel.app/screenshot1.png"
     ],
-    "heroImageUrl": "https://pumpordump-app.vercel.app/hero.png",
-    "requiredChains": ["eip155:8453"],
-    "requiredCapabilities": [
-      "actions.signIn",
-      "actions.swapToken",
-      "wallet.getEthereumProvider"
+    "primaryCategory": "finance",
+    "tags": [
+      "base",
+      "wallet",
+      "onchain",
+      "based",
+      "analyzis"
     ],
-    "webhookUrl": "https://pumpordump-app.vercel.app/api/base-webhook",
-    "ogTitle": "Pump or Dump",
-    "ogDescription": "Predict crypto trends and earn rewards.",
-    "ogImageUrl": "https://pumpordump-app.vercel.app/og.png",
-    "noindex": false
+    "heroImageUrl": "https://am-i-based.vercel.app/hero.png",
+    "tagline": "Stay based. Keep apeing.",
+    "ogTitle": "Am I Based?",
+    "ogDescription": "Check your onchain aura on Base. Stay based.",
+    "ogImageUrl": "https://am-i-based.vercel.app/og-image.png"
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjE1MjI1NjMsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg3MWRiZjdhNTBlRkU0OTYyOTc2OGRjOGExNEZCMEIyYjdjZTRGZjJjIn0",
+    "payload": "eyJkb21haW4iOiJhbS1pLWJhc2VkLnZlcmNlbC5hcHAifQ",
+    "signature": "I7XP1V2mzcm6+PoA7RR2GfUsVQCLGylZblH7OJ1jlkkiPBD51gxPvCff+AQGiY2xvr1QbDfrVHXV0fSNx+kWHRs="
   }
 }
